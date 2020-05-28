@@ -1,0 +1,57 @@
+import argparse
+import json
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-input_trec', type=str)
+    parser.add_argument('-input_qrels', type=str, default=None)
+    parser.add_argument('-input_queries', type=str)
+    parser.add_argument('-input_docs', type=str)
+    parser.add_argument('-output', type=str)
+    args = parser.parse_args()
+
+    qs = {}
+    if args.input_queries.split('.')[-1] == 'json' or args.input_queries.split('.')[-1] == 'jsonl':
+        with open(args.input_queries, 'r') as r:
+            for line in r:
+                line = json.loads(line)
+                qs[line['query_id']] = line['query']
+    else:
+        with open(args.input_queries, 'r') as r:
+            for line in r:
+                line = line.strip().split('\t')
+                qs[line[0]] = line[1]
+
+    ps = {}
+    with open(args.input_docs, 'r') as r:
+        for line in r:
+            line = json.loads(line)
+            ps[line['paper_id']] = ' '.join([line['title'], line['abstract']]).replace('\n', ' ').replace('\t', ' ').strip()
+
+    if args.input_qrels is not None:
+        qpls = {}
+        with open(args.input_qrels, 'r') as r:
+            for line in r:
+                line = line.strip().split()
+                if line[0] not in qpls:
+                    qpls[line[0]] = {}
+                qpls[line[0]][line[2]] = int(line[3])
+
+    f = open(args.output, 'w')
+    with open(args.input_trec, 'r') as r:
+        for line in r:
+            line = line.strip().split()
+            if line[0] not in qs or line[2] not in ps:
+                continue
+            if args.input_qrels is not None:
+                if line[0] in qpls and line[2] in qpls[line[0]]:
+                    label = qpls[line[0]][line[2]]
+                else:
+                    label = 0
+                f.write(json.dumps({'query': qs[line[0]], 'doc': ps[line[2]], 'label': label, 'query_id': line[0], 'paper_id': line[2], 'retrieval_score': float(line[4])}) + '\n')
+            else:
+                f.write(json.dumps({'query': qs[line[0]], 'doc': ps[line[2]], 'query_id': line[0], 'paper_id': line[2], 'retrieval_score': float(line[4])}) + '\n')
+    f.close()
+
+if __name__ == "__main__":
+    main()
