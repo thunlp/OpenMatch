@@ -55,6 +55,13 @@ For cknrm, knrm or tk inference
 sh inference.sh
 ```
 
+Options
+```
+-task            choices=['ranking', 'classification']
+-model           choices=['bert', 'tk', 'cknrm', 'knrm']
+```
+More information is available [here](./docs/openmatch.md).
+
 ## OpenMatch Experiments
 * [TREC-COVID Challenge](./docs/experiments-treccovid.md)
 
