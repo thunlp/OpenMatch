@@ -17,18 +17,19 @@ class Tokenizer():
         self._if_swr = if_swr
         self._if_stem = if_stem
         self._sp_tok = sp_tok
-        
-        self._id2token = None
-        self._token2id = None
-        self._embed_matrix = None
-        if self._vocab is not None:
-            self.from_vocab(self._vocab)
-        if self._pretrained is not None:
-            self.from_pretrained(self._pretrained)
+
         if self._if_swr:
             self._stopwords = set(stopwords.words('english'))
         if self._if_stem:
             self._stemmer = PorterStemmer()
+        
+        self._id2token = None
+        self._token2id = None
+        self._embed_matrix = None
+        if self._pretrained is not None:
+            self.from_pretrained(self._pretrained)
+        elif self._vocab is not None:
+            self.from_vocab(self._vocab)
 
     def tokenize(self, text: str) -> List[str]:
         raise NotImplementedError('function tokenize not implemented')
@@ -47,6 +48,23 @@ class Tokenizer():
         masks = [0 if tid == 0 else 1 for tid in ids]
         return ids, masks
 
+    def token_process(self, tokens: List[str], max_len: int) -> Tuple[List[int], List[int]]:
+        if len(tokens) < max_len:
+            tokens = tokens + [self._sp_tok] * (max_len - len(tokens))
+        else:
+            tokens = tokens[:max_len]
+        ids = self.convert_tokens_to_ids(tokens)
+        masks = [0 if tid == 0 else 1 for tid in ids]
+        return ids, masks
+
+    def batch_process(self, texts: List[str], max_len: int, max_num: int) -> Tuple[List[int], List[int]]:
+        if len(texts) < max_num:
+            texts = texts + [self._sp_tok] * (max_num - len(texts))
+        else:
+            texts = texts[:max_num]
+        batch_ids, batch_masks = zip(*[self.process(text, max_len) for text in texts])
+        return batch_ids, batch_masks
+
     def convert_tokens_to_ids(self, tokens: List[str]) -> List[int]:
         return [self._token2id[token] if token in self._token2id else 0 for token in tokens]
 
@@ -60,9 +78,9 @@ class Tokenizer():
         tid += 1
         with open(vocab, 'r') as reader:
             for line in reader:
-                line = line.strip().split()
-                self._id2token[tid] = line[0]
-                self._token2id[line[0]] = tid
+                line = line.strip('\n')
+                self._id2token[tid] = line
+                self._token2id[line] = tid
                 tid += 1
 
     def from_pretrained(self, pretrained: str) -> None:

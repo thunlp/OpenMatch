@@ -68,9 +68,11 @@ class Dataset(Dataset):
                         assert self._task == 'classification'
                         self._examples.append({'query': queries[line[0]], 'doc': docs[line[2]], 'label': label})
                     elif self._mode == 'dev':
-                        self._examples.append({'query': queries[line[0]], 'doc': docs[line[2]], 'label': label, 'query_id': line[0], 'paper_id': line[2], 'retrieval_score': float(line[4])})
+                        self._examples.append({'query': queries[line[0]], 'doc': docs[line[2]], 'label': label,
+                                               'query_id': line[0], 'paper_id': line[2], 'retrieval_score': float(line[4])})
                     elif self._mode == 'test':
-                        self._examples.append({'query': queries[line[0]], 'doc': docs[line[2]], 'query_id': line[0], 'paper_id': line[2], 'retrieval_score': float(line[4])})
+                        self._examples.append({'query': queries[line[0]], 'doc': docs[line[2]],
+                                               'query_id': line[0], 'paper_id': line[2], 'retrieval_score': float(line[4])})
                     else:
                         raise ValueError('Mode must be `train`, `dev` or `test`.')
         else:

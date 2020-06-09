@@ -29,8 +29,8 @@ Or
 
 |file|format|
 |:---|:-----|
-|queries|{"query\_id":, "query"}|
-|docs|"doc\_id":, "doc"|
+|queries|{"query\_id":, "query":}|
+|docs|{"doc\_id":, "doc":}|
 |qrels|query\_id iteration doc\_id label|
 |trec|query\_id Q0 doc\_id rank score run-tag|
 

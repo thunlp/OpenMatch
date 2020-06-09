@@ -1,5 +1,4 @@
 import argparse
-import json
 
 import torch
 import torch.nn as nn
@@ -14,6 +13,12 @@ def dev(args, model, metric, dev_loader, device):
         with torch.no_grad():
             if args.model == 'bert':
                 batch_score, _ = model(dev_batch['input_ids'].to(device), dev_batch['input_mask'].to(device), dev_batch['segment_ids'].to(device))
+            elif args.model == 'edrm':
+                batch_score, _ = model(dev_batch['query_wrd_idx'].to(device), dev_batch['query_wrd_mask'].to(device),
+                                       dev_batch['doc_wrd_idx'].to(device), dev_batch['doc_wrd_mask'].to(device),
+                                       dev_batch['query_ent_idx'].to(device), dev_batch['query_ent_mask'].to(device),
+                                       dev_batch['doc_ent_idx'].to(device), dev_batch['doc_ent_mask'].to(device),
+                                       dev_batch['query_des_idx'].to(device), dev_batch['doc_des_idx'].to(device))
             else:
                 batch_score, _ = model(dev_batch['query_idx'].to(device), dev_batch['query_mask'].to(device),
                                        dev_batch['doc_idx'].to(device), dev_batch['doc_mask'].to(device))
@@ -60,6 +65,30 @@ def train_reinfoselect(args, model, policy, loss_fn, m_optim, p_optim, metric, t
                 elif args.task == 'classification':
                     batch_probs, _ = policy(train_batch['input_ids'].to(device), train_batch['input_mask'].to(device), train_batch['segment_ids'].to(device))
                     batch_score, _ = model(train_batch['input_ids'].to(device), train_batch['input_mask'].to(device), train_batch['segment_ids'].to(device))
+                else:
+                    raise ValueError('Task must be `ranking` or `classification`.')
+            elif args.model == 'edrm':
+                if args.task == 'ranking':
+                    batch_probs, _ = policy(train_batch['query_wrd_idx'].to(device), train_batch['query_wrd_mask'].to(device),
+                                            train_batch['doc_pos_wrd_idx'].to(device), train_batch['doc_pos_wrd_mask'].to(device))
+                    batch_score_pos, _ = model(train_batch['query_wrd_idx'].to(device), train_batch['query_wrd_mask'].to(device),
+                                               train_batch['doc_pos_wrd_idx'].to(device), train_batch['doc_pos_wrd_mask'].to(device),
+                                               train_batch['query_ent_idx'].to(device), train_batch['query_ent_mask'].to(device),
+                                               train_batch['doc_pos_ent_idx'].to(device), train_batch['doc_pos_ent_mask'].to(device),
+                                               train_batch['query_des_idx'].to(device), train_batch['doc_pos_des_idx'].to(device))
+                    batch_score_neg, _ = model(train_batch['query_wrd_idx'].to(device), train_batch['query_wrd_mask'].to(device),
+                                               train_batch['doc_neg_wrd_idx'].to(device), train_batch['doc_neg_wrd_mask'].to(device),
+                                               train_batch['query_ent_idx'].to(device), train_batch['query_ent_mask'].to(device),
+                                               train_batch['doc_neg_ent_idx'].to(device), train_batch['doc_neg_ent_mask'].to(device),
+                                               train_batch['query_des_idx'].to(device), train_batch['doc_neg_des_idx'].to(device))
+                elif args.task == 'classification':
+                    batch_probs, _ = policy(train_batch['query_wrd_idx'].to(device), train_batch['query_wrd_mask'].to(device),
+                                            train_batch['doc_wrd_idx'].to(device), train_batch['doc_wrd_mask'].to(device))
+                    batch_score, _ = model(train_batch['query_wrd_idx'].to(device), train_batch['query_wrd_mask'].to(device),
+                                           train_batch['doc_wrd_idx'].to(device), train_batch['doc_wrd_mask'].to(device),
+                                           train_batch['query_ent_idx'].to(device), train_batch['query_ent_mask'].to(device),
+                                           train_batch['doc_ent_idx'].to(device), train_batch['doc_ent_mask'].to(device),
+                                           train_batch['query_des_idx'].to(device), train_batch['doc_des_idx'].to(device))
                 else:
                     raise ValueError('Task must be `ranking` or `classification`.')
             else:
@@ -132,6 +161,26 @@ def train(args, model, loss_fn, m_optim, metric, train_loader, dev_loader, devic
                     batch_score, _ = model(train_batch['input_ids'].to(device), train_batch['input_mask'].to(device), train_batch['segment_ids'].to(device))
                 else:
                     raise ValueError('Task must be `ranking` or `classification`.')
+            elif args.model == 'edrm':
+                if args.task == 'ranking':
+                    batch_score_pos, _ = model(train_batch['query_wrd_idx'].to(device), train_batch['query_wrd_mask'].to(device),
+                                               train_batch['doc_pos_wrd_idx'].to(device), train_batch['doc_pos_wrd_mask'].to(device),
+                                               train_batch['query_ent_idx'].to(device), train_batch['query_ent_mask'].to(device),
+                                               train_batch['doc_pos_ent_idx'].to(device), train_batch['doc_pos_ent_mask'].to(device),
+                                               train_batch['query_des_idx'].to(device), train_batch['doc_pos_des_idx'].to(device))
+                    batch_score_neg, _ = model(train_batch['query_wrd_idx'].to(device), train_batch['query_wrd_mask'].to(device),
+                                               train_batch['doc_neg_wrd_idx'].to(device), train_batch['doc_neg_wrd_mask'].to(device),
+                                               train_batch['query_ent_idx'].to(device), train_batch['query_ent_mask'].to(device),
+                                               train_batch['doc_neg_ent_idx'].to(device), train_batch['doc_neg_ent_mask'].to(device),
+                                               train_batch['query_des_idx'].to(device), train_batch['doc_neg_des_idx'].to(device))
+                elif args.task == 'classification':
+                    batch_score, _ = model(train_batch['query_wrd_idx'].to(device), train_batch['query_wrd_mask'].to(device),
+                                           train_batch['doc_wrd_idx'].to(device), train_batch['doc_wrd_mask'].to(device),
+                                           train_batch['query_ent_idx'].to(device), train_batch['query_ent_mask'].to(device),
+                                           train_batch['doc_ent_idx'].to(device), train_batch['doc_ent_mask'].to(device),
+                                           train_batch['query_des_idx'].to(device), train_batch['doc_des_idx'].to(device))
+                else:
+                    raise ValueError('Task must be `ranking` or `classification`.')
             else:
                 if args.task == 'ranking':
                     batch_score_pos, _ = model(train_batch['query_idx'].to(device), train_batch['query_mask'].to(device),
@@ -179,6 +228,7 @@ def main():
     parser.add_argument('-dev', action=om.utils.DictOrStr, default='./data/dev_toy.jsonl')
     parser.add_argument('-qrels', type=str, default='./data/qrels_toy')
     parser.add_argument('-vocab', type=str, default='allenai/scibert_scivocab_uncased')
+    parser.add_argument('-ent_vocab', type=str, default='')
     parser.add_argument('-pretrain', type=str, default='allenai/scibert_scivocab_uncased')
     parser.add_argument('-res', type=str, default='./results/bert.trec')
     parser.add_argument('-metric', type=str, default='ndcg_cut_10')
@@ -210,6 +260,39 @@ def main():
             mode='dev',
             query_max_len=args.max_query_len,
             doc_max_len=args.max_doc_len,
+            max_input=args.max_input,
+            task=args.task
+        )
+    elif args.model == 'edrm':
+        tokenizer = om.data.tokenizers.WordTokenizer(
+            pretrained=args.vocab
+        )
+        ent_tokenizer = om.data.tokenizers.WordTokenizer(
+            vocab=args.ent_vocab
+        )
+        print('reading training data...')
+        train_set = om.data.datasets.EDRMDataset(
+            dataset=args.train,
+            wrd_tokenizer=tokenizer,
+            ent_tokenizer=ent_tokenizer,
+            mode='train',
+            query_max_len=args.max_query_len,
+            doc_max_len=args.max_doc_len,
+            des_max_len=20,
+            max_ent_num=3,
+            max_input=args.max_input,
+            task=args.task
+        )
+        print('reading dev data...')
+        dev_set = om.data.datasets.EDRMDataset(
+            dataset=args.dev,
+            wrd_tokenizer=tokenizer,
+            ent_tokenizer=ent_tokenizer,
+            mode='dev',
+            query_max_len=args.max_query_len,
+            doc_max_len=args.max_doc_len,
+            des_max_len=20,
+            max_ent_num=3,
             max_input=args.max_input,
             task=args.task
         )
@@ -263,6 +346,21 @@ def main():
                 enc_dim=768,
                 task='classification'
             )
+    elif args.model.lower() == 'edrm':
+        model = om.models.EDRM(
+            wrd_vocab_size=tokenizer.get_vocab_size(),
+            ent_vocab_size=ent_tokenizer.get_vocab_size(),
+            wrd_embed_dim=tokenizer.get_embed_dim(),
+            ent_embed_dim=128,
+            max_des_len=20,
+            max_ent_num=3,
+            kernel_num=args.n_kernels,
+            kernel_dim=128,
+            kernel_sizes=[1, 2, 3],
+            wrd_embed_matrix=tokenizer.get_embed_matrix(),
+            ent_embed_matrix=None,
+            task=args.task
+        )
     elif args.model.lower() == 'tk':
         model = om.models.TK(
             vocab_size=tokenizer.get_vocab_size(),
