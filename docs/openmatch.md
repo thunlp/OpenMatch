@@ -91,9 +91,11 @@ The dev and test files can be set as:
 |qrels|query\_id iteration doc\_id label|
 |trec|query\_id Q0 doc\_id rank score run-tag|
 
-For edrm, the queries and docs is a little different:
+For edrm, the queries and docs are a little different:
 
 |file|format|
 |:---|:-----|
 |queries|+{"query\_ent": list, "query\_des": list}|
 |docs|+{"doc\_ent": list, "doc\_des": list}|
+
+Other bert-like models are also available, e.g. electra, scibert. You just need to change the path to the vocab and the pretrained model.

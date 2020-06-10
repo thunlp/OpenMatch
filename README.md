@@ -23,7 +23,7 @@ For bert training
 sh train_bert.sh
 ```
 
-For cknrm, knrm or tk training
+For edrm, cknrm, knrm or tk training
 ```
 sh train.sh
 ```
@@ -33,7 +33,7 @@ For bert inference
 sh inference_bert.sh
 ```
 
-For cknrm, knrm or tk inference
+For edrm, cknrm, knrm or tk inference
 ```
 sh inference.sh
 ```
@@ -41,7 +41,7 @@ sh inference.sh
 Options
 ```
 -task            choices=['ranking', 'classification']
--model           choices=['bert', 'tk', 'cknrm', 'knrm']
+-model           choices=['bert', 'tk', 'edrm', 'cknrm', 'knrm']
 ```
 More information is available [here](./docs/openmatch.md).
 
@@ -49,5 +49,4 @@ More information is available [here](./docs/openmatch.md).
 * [TREC-COVID Challenge](./docs/experiments-treccovid.md)
 
 ## Todo List
-### Models
 ANN
