@@ -17,23 +17,6 @@ wget http://nlp.stanford.edu/data/glove.6B.zip -P ./data
 unzip ./data/glove.6B.zip -d ./data
 ```
 
-## Data Format
-
-|file|format|
-|:---|:-----|
-|train|{"query":, "doc\_pos":, "doc\_neg":}|
-|dev  |{"query":, "doc":, "label":, "query\_id":, "paper\_id":, "retrieval\_score":}|
-|test |{"query":, "doc":, "query\_id":, "paper\_id":, "retrieval\_score":}|
-
-Or
-
-|file|format|
-|:---|:-----|
-|queries|{"query\_id":, "query":}|
-|docs|{"doc\_id":, "doc":}|
-|qrels|query\_id iteration doc\_id label|
-|trec|query\_id Q0 doc\_id rank score run-tag|
-
 ## Quick Start
 For bert training
 ```
@@ -67,7 +50,4 @@ More information is available [here](./docs/openmatch.md).
 
 ## Todo List
 ### Models
-EDRM
-
-### Datasets
-ReQA, WikiQA, SQuAD-Open
+ANN
