@@ -1,5 +1,4 @@
 import argparse
-import json
 
 import torch
 import torch.nn as nn
@@ -13,6 +12,12 @@ def test(args, model, test_loader, device):
         with torch.no_grad():
             if args.model == 'bert':
                 batch_score, _ = model(test_batch['input_ids'].to(device), test_batch['input_mask'].to(device), test_batch['segment_ids'].to(device))
+            elif args.model == 'edrm':
+                batch_score, _ = model(dev_batch['query_wrd_idx'].to(device), dev_batch['query_wrd_mask'].to(device),
+                                       dev_batch['doc_wrd_idx'].to(device), dev_batch['doc_wrd_mask'].to(device),
+                                       dev_batch['query_ent_idx'].to(device), dev_batch['query_ent_mask'].to(device),
+                                       dev_batch['doc_ent_idx'].to(device), dev_batch['doc_ent_mask'].to(device),
+                                       dev_batch['query_des_idx'].to(device), dev_batch['doc_des_idx'].to(device))
             else:
                 batch_score, _ = model(test_batch['query_idx'].to(device), test_batch['query_mask'].to(device),
                                        test_batch['doc_idx'].to(device), test_batch['doc_mask'].to(device))
@@ -39,6 +44,7 @@ def main():
     parser.add_argument('-max_input', type=int, default=1280000)
     parser.add_argument('-test', action=om.utils.DictOrStr, default='./data/test_toy.jsonl')
     parser.add_argument('-vocab', type=str, default='allenai/scibert_scivocab_uncased')
+    parser.add_argument('-ent_vocab', type=str, default='')
     parser.add_argument('-pretrain', type=str, default='allenai/scibert_scivocab_uncased')
     parser.add_argument('-checkpoint', type=str, default='./checkpoints/bert.bin')
     parser.add_argument('-res', type=str, default='./results/bert.trec')
@@ -57,6 +63,26 @@ def main():
             mode='test',
             query_max_len=args.max_query_len,
             doc_max_len=args.max_doc_len,
+            max_input=args.max_input,
+            task=args.task
+        )
+    elif args.model == 'edrm':
+        tokenizer = om.data.tokenizers.WordTokenizer(
+            pretrained=args.vocab
+        )
+        ent_tokenizer = om.data.tokenizers.WordTokenizer(
+            vocab=args.ent_vocab
+        )
+        print('reading test data...')
+        dev_set = om.data.datasets.EDRMDataset(
+            dataset=args.test,
+            wrd_tokenizer=tokenizer,
+            ent_tokenizer=ent_tokenizer,
+            mode='test',
+            query_max_len=args.max_query_len,
+            doc_max_len=args.max_doc_len,
+            des_max_len=20,
+            max_ent_num=3,
             max_input=args.max_input,
             task=args.task
         )
@@ -86,6 +112,21 @@ def main():
         model = om.models.Bert(
             pretrained=args.pretrain,
             enc_dim=768,
+            task=args.task
+        )
+    elif args.model.lower() == 'edrm':
+        model = om.models.EDRM(
+            wrd_vocab_size=tokenizer.get_vocab_size(),
+            ent_vocab_size=ent_tokenizer.get_vocab_size(),
+            wrd_embed_dim=tokenizer.get_embed_dim(),
+            ent_embed_dim=128,
+            max_des_len=20,
+            max_ent_num=3,
+            kernel_num=args.n_kernels,
+            kernel_dim=128,
+            kernel_sizes=[1, 2, 3],
+            wrd_embed_matrix=tokenizer.get_embed_matrix(),
+            ent_embed_matrix=None,
             task=args.task
         )
     elif args.model.lower() == 'tk':
