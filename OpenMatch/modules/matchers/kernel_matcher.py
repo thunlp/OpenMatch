@@ -33,11 +33,12 @@ class KernelMatcher(nn.Module):
         k_embed = k_embed * k_mask.unsqueeze(-1)
         v_embed = v_embed * v_mask.unsqueeze(-1)
         k_by_v_mask = torch.bmm(k_mask.float().unsqueeze(-1), v_mask.float().unsqueeze(-1).transpose(1, 2))
-        k_norm = k_embed / (k_embed.norm(p=2, dim=-1, keepdim=True) + 1e-13)
-        v_norm = v_embed / (v_embed.norm(p=2, dim=-1, keepdim=True) + 1e-13)
+        #k_norm = k_embed / (k_embed.norm(p=2, dim=-1, keepdim=True) + 1e-13)
+        #v_norm = v_embed / (v_embed.norm(p=2, dim=-1, keepdim=True) + 1e-13)
         inter = (torch.bmm(k_norm, v_norm.transpose(1, 2)) * k_by_v_mask).unsqueeze(-1)
 
         kernel_outputs = torch.exp((-((inter-self._mus)**2)/(self._sigmas**2)/2))
-        kernel_outputs = kernel_outputs.sum(dim=2).clamp(min=1e-10).log() * 1e-2
+        #kernel_outputs = kernel_outputs.sum(dim=2).clamp(min=1e-10).log() * 1e-2
+        kernel_outputs = (kernel_outputs.sum(dim=2) + 1e-6).log()
         logits = kernel_outputs.sum(dim=1)
         return logits
