@@ -36,22 +36,25 @@ def dev(args, model, metric, dev_loader, device):
             res = sorted(scores, key=lambda x: x[1], reverse=True)
             for rank, value in enumerate(res):
                 writer.write(q_id+' '+'Q0'+' '+str(value[2])+' '+str(rank+1)+' '+str(value[1])+' '+args.model+'\n')
-    mes = metric.get_metric(args.qrels, args.res)
+    if args.metric.split('_')[0] == 'mrr':
+        mes = metric.get_mrr(args.qrels, args.res, args.metric)
+    else:
+        mes = metric.get_metric(args.qrels, args.res, args.metric)
     return mes
 
 def train_reinfoselect(args, model, policy, loss_fn, m_optim, p_optim, metric, train_loader, dev_loader, device):
     best_mes = 0.0
     with torch.no_grad():
         mes = dev(args, model, metric, dev_loader, device)
-    if mes[args.metric] > best_mes:
-        best_mes = mes[args.metric]
+    if mes > best_mes:
+        best_mes = mes
         print('save_model...')
         if torch.cuda.device_count() > 1:
             torch.save(model.module.state_dict(), args.save)
         else:
             torch.save(model.state_dict(), args.save)
-    print('initial result: ', mes[args.metric])
-    last_mes = mes[args.metric]
+    print('initial result: ', mes)
+    last_mes = mes
     for epoch in range(args.epoch):
         avg_loss = 0.0
         for step, train_batch in enumerate(train_loader):
@@ -128,18 +131,18 @@ def train_reinfoselect(args, model, policy, loss_fn, m_optim, p_optim, metric, t
 
             with torch.no_grad():
                 mes = dev(args, model, metric, dev_loader, device)
-            if mes[args.metric] > best_mes:
-                best_mes = mes[args.metric]
+            if mes > best_mes:
+                best_mes = mes
                 print('save_model...')
                 if torch.cuda.device_count() > 1:
                     torch.save(model.module.state_dict(), args.save)
                 else:
                     torch.save(model.state_dict(), args.save)
-            print(step+1, avg_loss, mes[args.metric], best_mes)
+            print(step+1, avg_loss, mes, best_mes)
             avg_loss = 0.0
 
-            reward = mes[args.metric] - last_mes
-            last_mes = mes[args.metric]
+            reward = mes - last_mes
+            last_mes = mes
             if reward > 0:
                 policy_loss = (-log_prob_p * reward).sum().unsqueeze(-1)
             else:
@@ -207,14 +210,14 @@ def train(args, model, loss_fn, m_optim, metric, train_loader, dev_loader, devic
             if (step+1) % args.eval_every == 0:
                 with torch.no_grad():
                     mes = dev(args, model, metric, dev_loader, device)
-                if mes[args.metric] > best_mes:
-                    best_mes = mes[args.metric]
+                if mes > best_mes:
+                    best_mes = mes
                     print('save_model...')
                     if torch.cuda.device_count() > 1:
                         torch.save(model.module.state_dict(), args.save)
                     else:
                         torch.save(model.state_dict(), args.save)
-                print(step+1, avg_loss/args.eval_every, mes[args.metric], best_mes)
+                print(step+1, avg_loss/args.eval_every, mes, best_mes)
                 avg_loss = 0.0
 
 def main():
