@@ -25,11 +25,11 @@ def dev(args, model, metric, dev_loader, device):
             if args.task == 'classification':
                 batch_score = batch_score.softmax(dim=-1)[:, 1].squeeze(-1)
             batch_score = batch_score.detach().cpu().tolist()
-            for (q_id, d_id, l_s, d_s) in zip(query_id, doc_id, label, batch_score):
+            for (q_id, d_id, l, b_s) in zip(query_id, doc_id, label, batch_score):
                 if q_id in rst_dict:
-                    rst_dict[q_id].append((l_s, d_s, d_id))
+                    rst_dict[q_id].append((l, b_s, d_id))
                 else:
-                    rst_dict[q_id] = [(l_s, d_s, d_id)]
+                    rst_dict[q_id] = [(l, b_s, d_id)]
 
     with open(args.res, 'w') as writer:
         for q_id, scores in rst_dict.items():

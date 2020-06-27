@@ -5,36 +5,36 @@ import torch.nn as nn
 
 import OpenMatch as om
 
-def test(args, model, test_loader, device):
-    rst_dict = {}
-    for test_batch in test_loader:
-        query_id, doc_id, retrieval_score = test_batch['query_id'], test_batch['doc_id'], test_batch['retrieval_score']
+def dev(args, model, dev_loader, device):
+    features = []
+    for dev_batch in dev_loader:
+        query_id, doc_id, label, retrieval_score = dev_batch['query_id'], dev_batch['doc_id'], dev_batch['label'], dev_batch['retrieval_score']
         with torch.no_grad():
             if args.model == 'bert':
-                batch_score, _ = model(test_batch['input_ids'].to(device), test_batch['input_mask'].to(device), test_batch['segment_ids'].to(device))
+                batch_score, batch_feature = model(dev_batch['input_ids'].to(device), dev_batch['input_mask'].to(device), dev_batch['segment_ids'].to(device))
             elif args.model == 'edrm':
-                batch_score, _ = model(test_batch['query_wrd_idx'].to(device), test_batch['query_wrd_mask'].to(device),
-                                       test_batch['doc_wrd_idx'].to(device), test_batch['doc_wrd_mask'].to(device),
-                                       test_batch['query_ent_idx'].to(device), test_batch['query_ent_mask'].to(device),
-                                       test_batch['doc_ent_idx'].to(device), test_batch['doc_ent_mask'].to(device),
-                                       test_batch['query_des_idx'].to(device), test_batch['doc_des_idx'].to(device))
+                batch_score, batch_feature = model(dev_batch['query_wrd_idx'].to(device), dev_batch['query_wrd_mask'].to(device),
+                                                   dev_batch['doc_wrd_idx'].to(device), dev_batch['doc_wrd_mask'].to(device),
+                                                   dev_batch['query_ent_idx'].to(device), dev_batch['query_ent_mask'].to(device),
+                                                   dev_batch['doc_ent_idx'].to(device), dev_batch['doc_ent_mask'].to(device),
+                                                   dev_batch['query_des_idx'].to(device), dev_batch['doc_des_idx'].to(device))
             else:
-                batch_score, _ = model(test_batch['query_idx'].to(device), test_batch['query_mask'].to(device),
-                                       test_batch['doc_idx'].to(device), test_batch['doc_mask'].to(device))
+                batch_score, batch_feature = model(dev_batch['query_idx'].to(device), dev_batch['query_mask'].to(device),
+                                                   dev_batch['doc_idx'].to(device), dev_batch['doc_mask'].to(device))
             if args.task == 'classification':
                 batch_score = batch_score.softmax(dim=-1)[:, 1].squeeze(-1)
             batch_score = batch_score.detach().cpu().tolist()
-            for (q_id, d_id, b_s) in zip(query_id, doc_id, batch_score):
-                if q_id in rst_dict:
-                    rst_dict[q_id].append((b_s, d_id))
-                else:
-                    rst_dict[q_id] = [(b_s, d_id)]
-
+            batch_feature = batch_feature.detach().cpu().tolist()
+            for (q_id, d_id, l, b_s, b_f, r_s) in zip(query_id, doc_id, label, batch_score, batch_feature, retrieval_score):
+                feature = []
+                feature.append(str(l))
+                feature.append('id:' + q_id)
+                for i, fi in enumerate(b_f):
+                    feature.append(str(i+1) + ':' + str(fi))
+                features.append(' '.join(feature))
     with open(args.res, 'w') as writer:
-        for q_id, scores in rst_dict.items():
-            res = sorted(scores, key=lambda x: x[0], reverse=True)
-            for rank, value in enumerate(res):
-                writer.write(q_id+' '+'Q0'+' '+str(value[1])+' '+str(rank+1)+' '+str(value[0])+' '+args.model+'\n')
+        for feature in features:
+            writer.write(feature+'\n')
     return
 
 def main():
@@ -42,12 +42,12 @@ def main():
     parser.add_argument('-task', type=str, default='ranking')
     parser.add_argument('-model', type=str, default='bert')
     parser.add_argument('-max_input', type=int, default=1280000)
-    parser.add_argument('-test', action=om.utils.DictOrStr, default='./data/test_toy.jsonl')
+    parser.add_argument('-dev', action=om.utils.DictOrStr, default='./data/dev_toy.jsonl')
     parser.add_argument('-vocab', type=str, default='allenai/scibert_scivocab_uncased')
     parser.add_argument('-ent_vocab', type=str, default='')
     parser.add_argument('-pretrain', type=str, default='allenai/scibert_scivocab_uncased')
     parser.add_argument('-checkpoint', type=str, default='./checkpoints/bert.bin')
-    parser.add_argument('-res', type=str, default='./results/bert.trec')
+    parser.add_argument('-res', type=str, default='./features/bert_features')
     parser.add_argument('-n_kernels', type=int, default=21)
     parser.add_argument('-max_query_len', type=int, default=32)
     parser.add_argument('-max_doc_len', type=int, default=256)
@@ -56,11 +56,11 @@ def main():
 
     if args.model == 'bert':
         tokenizer = args.vocab
-        print('reading test data...')
-        test_set = om.data.datasets.BertDataset(
-            dataset=args.test,
+        print('reading dev data...')
+        dev_set = om.data.datasets.BertDataset(
+            dataset=args.dev,
             tokenizer=tokenizer,
-            mode='test',
+            mode='dev',
             query_max_len=args.max_query_len,
             doc_max_len=args.max_doc_len,
             max_input=args.max_input,
@@ -73,12 +73,12 @@ def main():
         ent_tokenizer = om.data.tokenizers.WordTokenizer(
             vocab=args.ent_vocab
         )
-        print('reading test data...')
+        print('reading dev data...')
         dev_set = om.data.datasets.EDRMDataset(
-            dataset=args.test,
+            dataset=args.dev,
             wrd_tokenizer=tokenizer,
             ent_tokenizer=ent_tokenizer,
-            mode='test',
+            mode='dev',
             query_max_len=args.max_query_len,
             doc_max_len=args.max_doc_len,
             des_max_len=20,
@@ -90,19 +90,19 @@ def main():
         tokenizer = om.data.tokenizers.WordTokenizer(
             pretrained=args.vocab
         )
-        print('reading test data...')
-        test_set = om.data.datasets.Dataset(
-            dataset=args.test,
+        print('reading dev data...')
+        dev_set = om.data.datasets.Dataset(
+            dataset=args.dev,
             tokenizer=tokenizer,
-            mode='test',
+            mode='dev',
             query_max_len=args.max_query_len,
             doc_max_len=args.max_doc_len,
             max_input=args.max_input,
             task=args.task
         )
 
-    test_loader = om.data.DataLoader(
-        dataset=test_set,
+    dev_loader = om.data.DataLoader(
+        dataset=dev_set,
         batch_size=args.batch_size,
         shuffle=False,
         num_workers=8
@@ -182,7 +182,7 @@ def main():
     if torch.cuda.device_count() > 1:
         model = nn.DataParallel(model)
 
-    test(args, model, test_loader, device)
+    dev(args, model, dev_loader, device)
 
 if __name__ == "__main__":
     main()

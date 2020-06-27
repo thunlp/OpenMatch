@@ -106,6 +106,11 @@ You can also train bert for masked language model with *train_bertmlm.py*. The t
 |:---|:-----|
 |train|{'doc': str}|
 
+If you want to concatenate the neural features with retrieval scores (SDM/BM25), and run coor-ascent, you need to generate a features file using *gen_feature.py*, and run
+```
+sh coor_ascent.sh
+```
+
 ## results
 
 All results is measured on ndcg@20 with 5 fold cross-validation.
