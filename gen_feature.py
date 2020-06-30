@@ -25,12 +25,14 @@ def dev(args, model, dev_loader, device):
                 batch_score = batch_score.softmax(dim=-1)[:, 1].squeeze(-1)
             batch_score = batch_score.detach().cpu().tolist()
             batch_feature = batch_feature.detach().cpu().tolist()
+            retrieval_score = retrieval_score.tolist()
             for (q_id, d_id, l, b_s, b_f, r_s) in zip(query_id, doc_id, label, batch_score, batch_feature, retrieval_score):
                 feature = []
                 feature.append(str(l))
                 feature.append('id:' + q_id)
                 for i, fi in enumerate(b_f):
                     feature.append(str(i+1) + ':' + str(fi))
+                feature.append(str(i+2) + ':' + str(r_s))
                 features.append(' '.join(feature))
     with open(args.res, 'w') as writer:
         for feature in features:

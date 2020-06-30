@@ -124,8 +124,8 @@ def train_reinfoselect(args, model, policy, loss_fn, m_optim, p_optim, metric, t
                 raise ValueError('Task must be `ranking` or `classification`.')
             if torch.cuda.device_count() > 1:
                 batch_loss = batch_loss.mean(-1)
-            avg_loss += batch_loss.mean().item()
             batch_loss = batch_loss.mul(weights).mean()
+            avg_loss += batch_loss.item()
             batch_loss.backward()
             m_optim.step()
 
@@ -426,7 +426,7 @@ def main():
             raise ValueError('Task must be `ranking` or `classification`.')
     m_optim = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr)
     if args.reinfoselect:
-        p_optim = torch.optim.Adam(filter(lambda p: p.requires_grad, policy.parameters()), lr=args.lr/10)
+        p_optim = torch.optim.Adam(filter(lambda p: p.requires_grad, policy.parameters()), lr=args.lr)
     metric = om.metrics.Metric()
 
     model.to(device)
