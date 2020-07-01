@@ -11,15 +11,15 @@ An Open-Source Package for Open-Domain QA (OpenQA) and Information Retrieval (IR
 **SS: "Reproduce Our Submit"这里可以link到docs里专门介绍trec-covid的文件**
 
 ## Overview
-**OpenMatch** integrates excellent neural methods and technologies to provide a complete solution for deep text matching and understanding.
+> **OpenMatch** integrates excellent neural methods and technologies to provide a complete solution for deep text matching and understanding.
 
-* **Document Indexing**: associates the information with a document allowing it to be easily retrieved later according to the user's query.
+> **Document Indexing** associates the information with a document allowing it to be easily retrieved later according to the user's query.
 
-* **Document Retrieval**: aims to produce a relevance ranked list of documents by matching texts against user queries.
+> **Document Retrieval** aims to produce a relevance ranked list of documents by matching texts against user queries.
 
-* **Question Answering**: locates precise answers to user queries from the related documents retrieved.
+> **Question Answering**: locates precise answers to user queries from the related documents retrieved.
 
-* **Data Augmentation**: leverages weak supervision data to improve the ranking accuracy in certain areas that lacks large scale relevance labels.
+> **Data Augmentation**: leverages weak supervision data to improve the ranking accuracy in certain areas that lacks large scale relevance labels.
 
   |Stage|Models|Desription|
   |:----|:----:|:----|
