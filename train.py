@@ -30,22 +30,17 @@ def dev(args, model, metric, dev_loader, device):
                     rst_dict[q_id].append((l, b_s, d_id))
                 else:
                     rst_dict[q_id] = [(l, b_s, d_id)]
-
-    with open(args.res, 'w') as writer:
-        for q_id, scores in rst_dict.items():
-            res = sorted(scores, key=lambda x: x[1], reverse=True)
-            for rank, value in enumerate(res):
-                writer.write(q_id+' '+'Q0'+' '+str(value[2])+' '+str(rank+1)+' '+str(value[1])+' '+args.model+'\n')
-    if args.metric.split('_')[0] == 'mrr':
-        mes = metric.get_mrr(args.qrels, args.res, args.metric)
-    else:
-        mes = metric.get_metric(args.qrels, args.res, args.metric)
-    return mes
+    return rst_dict
 
 def train_reinfoselect(args, model, policy, loss_fn, m_optim, p_optim, metric, train_loader, dev_loader, device):
     best_mes = 0.0
     with torch.no_grad():
-        mes = dev(args, model, metric, dev_loader, device)
+        rst_dict = dev(args, model, metric, dev_loader, device)
+        om.utils.save_trec(args.res, rst_dict)
+        if args.metric.split('_')[0] == 'mrr':
+            mes = metric.get_mrr(args.qrels, args.res, args.metric)
+        else:
+            mes = metric.get_metric(args.qrels, args.res, args.metric)
     if mes > best_mes:
         best_mes = mes
         print('save_model...')
@@ -130,7 +125,12 @@ def train_reinfoselect(args, model, policy, loss_fn, m_optim, p_optim, metric, t
             m_optim.step()
 
             with torch.no_grad():
-                mes = dev(args, model, metric, dev_loader, device)
+                rst_dict = dev(args, model, metric, dev_loader, device)
+                om.utils.save_trec(args.res, rst_dict)
+                if args.metric.split('_')[0] == 'mrr':
+                    mes = metric.get_mrr(args.qrels, args.res, args.metric)
+                else:
+                    mes = metric.get_metric(args.qrels, args.res, args.metric)
             if mes > best_mes:
                 best_mes = mes
                 print('save_model...')
@@ -209,7 +209,12 @@ def train(args, model, loss_fn, m_optim, metric, train_loader, dev_loader, devic
 
             if (step+1) % args.eval_every == 0:
                 with torch.no_grad():
-                    mes = dev(args, model, metric, dev_loader, device)
+                    rst_dict = dev(args, model, metric, dev_loader, device)
+                    om.utils.save_trec(args.res, rst_dict)
+                    if args.metric.split('_')[0] == 'mrr':
+                        mes = metric.get_mrr(args.qrels, args.res, args.metric)
+                    else:
+                        mes = metric.get_metric(args.qrels, args.res, args.metric)
                 if mes > best_mes:
                     best_mes = mes
                     print('save_model...')

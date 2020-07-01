@@ -34,10 +34,7 @@ def dev(args, model, dev_loader, device):
                     feature.append(str(i+1) + ':' + str(fi))
                 feature.append(str(i+2) + ':' + str(r_s))
                 features.append(' '.join(feature))
-    with open(args.res, 'w') as writer:
-        for feature in features:
-            writer.write(feature+'\n')
-    return
+    return features
 
 def main():
     parser = argparse.ArgumentParser()
@@ -184,7 +181,8 @@ def main():
     if torch.cuda.device_count() > 1:
         model = nn.DataParallel(model)
 
-    dev(args, model, dev_loader, device)
+    features = dev(args, model, dev_loader, device)
+    om.utils.save_features(args.res, features)
 
 if __name__ == "__main__":
     main()

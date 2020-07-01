@@ -1,3 +1,5 @@
+import os
+import json
 from argparse import Action
 
 class DictOrStr(Action):
@@ -10,3 +12,22 @@ class DictOrStr(Action):
              setattr(namespace, self.dest, my_dict)
          else:
              setattr(namespace, self.dest, values)
+
+def check_dir(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
+    return path
+
+def save_trec(rst_file, rst_dict):
+    with open(rst_file, 'w') as writer:
+        for q_id, scores in rst_dict.items():
+            res = sorted(scores, key=lambda x: x[0], reverse=True)
+            for rank, value in enumerate(res):
+                writer.write(q_id+' '+'Q0'+' '+str(value[1])+' '+str(rank+1)+' '+str(value[0])+' '+args.model+'\n')
+    return
+
+def save_features(rst_file, features):
+    with open(rst_file, 'w') as writer:
+        for feature in features:
+            writer.write(feature+'\n')
+    return

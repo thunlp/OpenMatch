@@ -29,13 +29,7 @@ def test(args, model, test_loader, device):
                     rst_dict[q_id].append((b_s, d_id))
                 else:
                     rst_dict[q_id] = [(b_s, d_id)]
-
-    with open(args.res, 'w') as writer:
-        for q_id, scores in rst_dict.items():
-            res = sorted(scores, key=lambda x: x[0], reverse=True)
-            for rank, value in enumerate(res):
-                writer.write(q_id+' '+'Q0'+' '+str(value[1])+' '+str(rank+1)+' '+str(value[0])+' '+args.model+'\n')
-    return
+    return rst_dict
 
 def main():
     parser = argparse.ArgumentParser()
@@ -182,7 +176,8 @@ def main():
     if torch.cuda.device_count() > 1:
         model = nn.DataParallel(model)
 
-    test(args, model, test_loader, device)
+    rst_dict = test(args, model, test_loader, device)
+    om.utils.save_trec(args.res, rst_dict)
 
 if __name__ == "__main__":
     main()
