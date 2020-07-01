@@ -3,7 +3,7 @@ An Open-Source Package for Open-Domain QA (OpenQA) and Information Retrieval (IR
 
 **SS: 这里需要稍微更详细更吸引人的描述**
 
-## 😃 News
+## 😃 What's News
 * **[Top Spot on TREC-COVID Challenge](https://ir.nist.gov/covidSubmit/about.html)** (May 2020, Round2)
 
   The twin goals of the challenge are to evaluate search algorithms and systems for helping scientists, clinicians, policy makers, and others manage the existing and rapidly growing corpus of scientific literature related to COVID-19, and to discover methods that will assist with managing scientific information in future global biomedical crises. \
