@@ -19,15 +19,15 @@ An Open-Source Package for Open-Domain QA (OpenQA) and Information Retrieval (IR
 
 * **Document Retrieval**
 
-> **Document Retrieval** aims to produce a relevance ranked list of documents by matching texts against user queries.
+  Document Retrieval aims to produce a relevance ranked list of documents by matching texts against user queries.
 
 * **Question Answering**
 
-> **Question Answering** locates precise answers to user queries from the related documents retrieved.
+  Question Answering locates precise answers to user queries from the related documents retrieved.
 
 * **Data Augmentation**
 
-> **Data Augmentation** leverages weak supervision data to improve the ranking accuracy in certain areas that lacks large scale relevance labels.
+  Data Augmentation leverages weak supervision data to improve the ranking accuracy in certain areas that lacks large scale relevance labels.
 
 
   |Stage|Models|Desription|
@@ -80,55 +80,49 @@ An Open-Source Package for Open-Domain QA (OpenQA) and Information Retrieval (IR
 
 **SS: 以上填入正确的安装步骤**
 
-## Easy Start
 
-### Start >> Document Indexing
+## Quick Start
+
+### >> Document Indexing
 
 * **Prepare Data**
 
-**SS:给出如何进行数据预处理的步骤，或者给出data format**
+
 
 * **Run Model**
 
   - Training
 
-**SS: 这里给出如何利用👆上面准备的数据，来训练ANN model**
-
 
   - Inference
 
-**SS: 这里给出如何利用👆上面准备的数据，来infer ANN model**
+
 
 * **Evaluation**
 
-**SS: 这里可以提供相应的测试步骤，来获得测评结果**
 
 
-###  Start >> Document Retrieval
+
+### >> Document Retrieval
 
 * **Prepare Data**
 
-**SS: 给出如何进行数据预处理的步骤，或者给出data format (如果太多了可以把多余的部分放到doc里，增加跳转)**
 
 * **Run Model**
 
   - Training
 
-**SS: 这里给出如何利用👆上面准备的数据，选择不同的neural model来训练**
+
 
   - Inference
-
-**SS: 这里给出如何利用👆上面准备的数据，来infer model**
 
 
 * **Evaluation**
 
-**SS: 这里可以提供相应的测试步骤，来获得测评结果**
 
 
-###  Start >> Question Answering
 
-**SS: QA我看工具包的介绍提到了，但是我不太清楚，是否需要详细的details**
+### >> Question Answering
 
 * **Prepare Data**
 
@@ -143,11 +137,10 @@ An Open-Source Package for Open-Domain QA (OpenQA) and Information Retrieval (IR
 
 
 
-### Start >> Data Augmentation
+### >> Data Augmentation
 
 * **Prepare Data**
 
-**SS: 如果数据预处理部分和测试部分和 Document Retrieval 相同，可以写 the same as Document Retrieval**
 
 * **Run Model**
 
@@ -156,6 +149,9 @@ An Open-Source Package for Open-Domain QA (OpenQA) and Information Retrieval (IR
   - Inference
 
 * **Evaluation**
+
+
+**SS: 在相应的位置填入较为详细的步骤**
 
 
 ## Experiments
