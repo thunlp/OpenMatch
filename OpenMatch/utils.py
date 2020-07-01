@@ -23,7 +23,7 @@ def save_trec(rst_file, rst_dict):
         for q_id, scores in rst_dict.items():
             res = sorted(scores, key=lambda x: x[0], reverse=True)
             for rank, value in enumerate(res):
-                writer.write(q_id+' '+'Q0'+' '+str(value[1])+' '+str(rank+1)+' '+str(value[0])+' '+args.model+'\n')
+                writer.write(q_id+' Q0 '+str(value[1])+' '+str(rank+1)+' '+str(value[0])+' openmatch\n')
     return
 
 def save_features(rst_file, features):

@@ -82,7 +82,7 @@ class EDRMDataset(Dataset):
                     elif self._mode == 'dev':
                         self._examples.append({'label': label, 'query_id': line[0], 'paper_id': line[2], 'retrieval_score': float(line[4])})
                     elif self._mode == 'test':
-                        self._examples.append({'query_id': line[0], 'paper_id': line[2], 'retrieval_score': float(line[4]),
+                        self._examples.append({'query_id': line[0], 'paper_id': line[2], 'retrieval_score': float(line[4])})
                     else:
                         raise ValueError('Mode must be `train`, `dev` or `test`.')
         else:
