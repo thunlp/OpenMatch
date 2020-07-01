@@ -11,11 +11,11 @@ An Open-Source Package for Open-Domain QA (OpenQA) and Information Retrieval (IR
 **SS: "Reproduce Our Submit"这里可以link到docs里专门介绍trec-covid的文件**
 
 ## Overview
-**OpenMatch** integrates excellent neural methods and technologies to provide a complete solution for deep text matching and understanding.
+> **OpenMatch** integrates excellent neural methods and technologies to provide a complete solution for deep text matching and understanding.
 
 * **Document Indexing**
 
-> **Document Indexing** associates the information with a document allowing it to be easily retrieved later according to the user's query.
+  Document Indexing associates the information with a document allowing it to be easily retrieved later according to the user's query.
 
 * **Document Retrieval**
 
