@@ -33,6 +33,7 @@ class EDRMDataset(Dataset):
         self._task = task
 
         if isinstance(self._dataset, str):
+            self._id = False
             with open(self._dataset, 'r') as f:
                 self._examples = []
                 for i, line in enumerate(f):
@@ -41,16 +42,17 @@ class EDRMDataset(Dataset):
                     line = json.loads(line)
                     self._examples.append(line)
         elif isinstance(self._dataset, dict):
-            queries = {}
+            self._id = True
+            self._queries = {}
             with open(self._dataset['queries'], 'r') as f:
                 for line in f:
                     line = json.loads(line)
-                    queries[line['query_id']] = (line['query'], line['query_ent'], line['query_des'])
-            docs = {}
+                    self._queries[line['query_id']] = (line['query'], line['query_ent'], line['query_des'])
+            self._docs = {}
             with open(self._dataset['docs'], 'r') as f:
                 for line in f:
                     line = json.loads(line)
-                    docs[line['doc_id']] = (line['doc'], line['doc_ent'], line['doc_des'])
+                    self._docs[line['doc_id']] = (line['doc'], line['doc_ent'], line['doc_des'])
             if self._mode != 'test':
                 qrels = {}
                 with open(self._dataset['qrels'], 'r') as f:
@@ -71,20 +73,16 @@ class EDRMDataset(Dataset):
                         else:
                             label = qrels[line[0]][line[2]]
                     if self._mode == 'train':
-                        assert self._task == 'classification'
-                        self._examples.append({'query': queries[line[0]][0], 'doc': docs[line[2]][0], 'label': label,
-                                               'query_ent': queries[line[0]][1], 'doc_ent': docs[line[0]][1],
-                                               'query_des': queries[line[0]][2], 'doc_des': docs[line[0]][2]})
+                        if self._task == 'ranking':
+                            self._examples.append({'query_id': line[0], 'doc_pos_id': line[1], 'doc_neg_id': line[2]})
+                        elif self._task == 'classification':
+                            self._examples.append({'query': line[0], 'paper_id': line[2], 'label': label if label < 2 else 1})
+                        else:
+                            raise ValueError('Task must be `ranking` or `classification`.')
                     elif self._mode == 'dev':
-                        self._examples.append({'query': queries[line[0]][0], 'doc': docs[line[2]][0], 'label': label, 'query_id': line[0],
-                                               'paper_id': line[2], 'retrieval_score': float(line[4]),
-                                               'query_ent': queries[line[0]][1], 'doc_ent': docs[line[0]][1],
-                                               'query_des': queries[line[0]][2], 'doc_des': docs[line[0]][2]})
+                        self._examples.append({'label': label, 'query_id': line[0], 'paper_id': line[2], 'retrieval_score': float(line[4])})
                     elif self._mode == 'test':
-                        self._examples.append({'query': queries[line[0]][0], 'doc': docs[line[2]][0],
-                                               'query_id': line[0], 'paper_id': line[2], 'retrieval_score': float(line[4]),
-                                               'query_ent': queries[line[0]][1], 'doc_ent': docs[line[0]][1],
-                                               'query_des': queries[line[0]][2], 'doc_des': docs[line[0]][2]})
+                        self._examples.append({'query_id': line[0], 'paper_id': line[2], 'retrieval_score': float(line[4]),
                     else:
                         raise ValueError('Mode must be `train`, `dev` or `test`.')
         else:
@@ -180,6 +178,13 @@ class EDRMDataset(Dataset):
 
     def __getitem__(self, index: int) -> Dict[str, Any]:
         example = self._examples[index]
+        if self._id:
+            example['query'], example['query_ent'], example['query_des'] = self._queries[example['query_id']]
+            if self._mode == 'train' and self._task == 'ranking':
+                example['doc_pos'], example['doc_pos_ent'], example['doc_pos_des'] = self._docs[example['doc_pos_id']]
+                example['doc_neg'], example['doc_neg_ent'], example['doc_neg_des'] = self._docs[example['doc_neg_id']]
+            else:
+                example['doc'], example['doc_ent'], example['doc_des'] = self._docs[example['paper_id']]
         if self._mode == 'train':
             if self._task == 'ranking':
                 query_wrd_idx, query_wrd_mask = self._wrd_tokenizer.process(example['query'], self._query_max_len)
