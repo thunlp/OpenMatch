@@ -6,28 +6,36 @@ An Open-Source Package for Open-Domain QA (OpenQA) and Information Retrieval (IR
 ## 😃 News
 * **[Top Spot on TREC-COVID Challenge](https://ir.nist.gov/covidSubmit/about.html)** (May 2020, Round2)
 
-  The twin goals of the challenge are to evaluate search algorithms and systems for helping scientists, clinicians, policy makers, and others manage the existing and rapidly growing corpus of scientific literature related to COVID-19, and to discover methods that will assist with managing scientific information in future global biomedical crises. >> [About COVID-19 Dataset](https://www.semanticscholar.org/cord19) >> [Reproduce Our Submit]()
+  The twin goals of the challenge are to evaluate search algorithms and systems for helping scientists, clinicians, policy makers, and others manage the existing and rapidly growing corpus of scientific literature related to COVID-19, and to discover methods that will assist with managing scientific information in future global biomedical crises. \
+  [>> Reproduce Our Submit]() [>> About COVID-19 Dataset](https://www.semanticscholar.org/cord19)
+
 
 **SS: "Reproduce Our Submit"这里可以link到docs里专门介绍trec-covid的文件**
 
 ## Overview
-> **OpenMatch** integrates excellent neural methods and technologies to provide a complete solution for deep text matching and understanding.
+> **OpenMatch** integrates excellent neural methods and technologies to
+\
+provide a complete solution for deep text matching and understanding.
 
 * **Document Indexing**
 
-  Document Indexing associates the information with a document allowing it to be easily retrieved later according to the user's query.
+  Document Indexing associates the information with a document allowing \
+  it to be easily retrieved later according to the user's query.
 
 * **Document Retrieval**
 
-  Document Retrieval aims to produce a relevance ranked list of documents by matching texts against user queries.
+  Document Retrieval aims to produce a relevance ranked list of documents \
+  by matching texts against user queries.
 
 * **Question Answering**
 
-  Question Answering locates precise answers to user queries from the related documents retrieved.
+  Question Answering locates precise answers to user queries from \
+  the related documents retrieved.
 
 * **Data Augmentation**
 
-  Data Augmentation leverages weak supervision data to improve the ranking accuracy in certain areas that lacks large scale relevance labels.
+  Data Augmentation leverages weak supervision data to improve the ranking \
+  accuracy in certain areas that lacks large scale relevance labels.
 
 
   |Stage|Models|Desription|
