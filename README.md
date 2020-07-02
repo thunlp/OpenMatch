@@ -1,20 +1,9 @@
 # OpenMatch
 An Open-Source Package for OpenQA and IR.
 
-## Requirements
-### Setup requirements directly
-* `python == 3.7`
-* `torch >= 1.0.0`
-
-To run OpenMatch, please install all requirements.
+## Installation
 ```
-pip install -r requirements.txt
-```
-
-Get glove embeddings.
-```
-wget http://nlp.stanford.edu/data/glove.6B.zip -P ./data
-unzip ./data/glove.6B.zip -d ./data
+pip install git+https://github.com/thunlp/OpenMatch.git
 ```
 
 ## Quick Start
@@ -38,15 +27,33 @@ For edrm, cknrm, knrm or tk inference
 sh inference.sh
 ```
 
-Options
-```
--task            choices=['ranking', 'classification']
--model           choices=['bert', 'tk', 'edrm', 'cknrm', 'knrm']
-```
 More information is available [here](./docs/openmatch.md).
 
-## OpenMatch Experiments
+## Experiments
 * [TREC-COVID Challenge](./docs/experiments-treccovid.md)
+* All results is measured on ndcg@20 with 5 fold cross-validation.
 
-## Todo List
+|Model|ClueWeb09|Robust04|ClueWeb12|
+|:---:|:-------:|:------:|:-------:|
+|KNRM|0.1880|0.3016|0.0968|
+|Conv-KNRM|0.1894|0.2907|0.0896|
+|EDRM|0.2015|0.2993|0.0937|
+|TK|0.2306|0.2822|0.0966|
+|BERT|0.2701|0.4168|0.1183|
+|ELECTRA|0.2861|0.4668|0.1078|
+
+## TBD
 ANN
+
+## Contribution
+Thanks to all the people who contributed to OpenMatch!
+
+[Kaitao Zhang](https://github.com/zkt12), [Aowei Lu](https://github.com/LAW991224), [Si Sun](https://github.com/SunSiShining), [Zhenghao Liu](http://nlp.csai.tsinghua.edu.cn/~lzh/)
+
+## Project Organizers
+- Zhiyuan Liu
+  * Tsinghua University
+  * [Homepage](http://nlp.csai.tsinghua.edu.cn/~lzy/)
+- Chenyan Xiong
+  * Microsoft Research AI
+  * [Homepage](https://www.microsoft.com/en-us/research/people/cxiong/)

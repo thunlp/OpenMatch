@@ -110,16 +110,3 @@ If you want to concatenate the neural features with retrieval scores (SDM/BM25),
 ```
 sh coor_ascent.sh
 ```
-
-## results
-
-All results is measured on ndcg@20 with 5 fold cross-validation.
-
-|Model|ClueWeb09|Robust04|ClueWeb12|
-|:---:|:-------:|:------:|:-------:|
-|KNRM|0.1880|0.3016|0.0968|
-|Conv-KNRM|0.1894|0.2907|0.0896|
-|EDRM|0.2015|0.2993|0.0937|
-|TK|0.2306|0.2822|0.0966|
-|BERT|0.2701|0.4168|0.1183|
-|ELECTRA|0.2861|0.4668|0.1078|
