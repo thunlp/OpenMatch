@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 from torch.distributions import Categorical
 
+from transformers import AutoTokenizer
 import OpenMatch as om
 
 def dev(args, model, metric, dev_loader, device):
@@ -250,7 +251,7 @@ def main():
     args = parser.parse_args()
 
     if args.model == 'bert':
-        tokenizer = args.vocab
+        tokenizer = AutoTokenizer.from_pretrained(args.vocab)
         print('reading training data...')
         train_set = om.data.datasets.BertDataset(
             dataset=args.train,

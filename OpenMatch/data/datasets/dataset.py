@@ -133,7 +133,7 @@ class Dataset(Dataset):
     def __getitem__(self, index: int) -> Dict[str, Any]:
         example = self._examples[index]
         if self._id:
-            example['query'] = self.queries[example['query_id']]
+            example['query'] = self._queries[example['query_id']]
             if self._mode == 'train' and self._task == 'ranking':
                 example['doc_pos'] = self._docs[example['doc_pos_id']]
                 example['doc_neg'] = self._docs[example['doc_neg_id']]

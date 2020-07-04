@@ -11,7 +11,7 @@ class BertDataset(Dataset):
     def __init__(
         self,
         dataset: str,
-        tokenizer: str,
+        tokenizer: AutoTokenizer,
         mode: str,
         query_max_len: int = 32,
         doc_max_len: int = 256,
@@ -19,7 +19,7 @@ class BertDataset(Dataset):
         task: str = 'ranking'
     ) -> None:
         self._dataset = dataset
-        self._tokenizer = AutoTokenizer.from_pretrained(tokenizer)
+        self._tokenizer = tokenizer
         self._mode = mode
         self._query_max_len = query_max_len
         self._doc_max_len = doc_max_len
@@ -147,7 +147,7 @@ class BertDataset(Dataset):
     def __getitem__(self, index: int) -> Dict[str, Any]:
         example = self._examples[index]
         if self._id:
-            example['query'] = self.queries[example['query_id']]
+            example['query'] = self._queries[example['query_id']]
             if self._mode == 'train' and self._task == 'ranking':
                 example['doc_pos'] = self._docs[example['doc_pos_id']]
                 example['doc_neg'] = self._docs[example['doc_neg_id']]

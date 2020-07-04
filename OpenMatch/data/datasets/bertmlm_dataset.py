@@ -11,12 +11,12 @@ class BertMLMDataset(Dataset):
     def __init__(
         self,
         dataset: str,
-        tokenizer: str,
+        tokenizer: AutoTokenizer,
         seq_max_len: int = 256,
         max_input: int = 1280000,
     ) -> None:
         self._dataset = dataset
-        self._tokenizer = AutoTokenizer.from_pretrained(tokenizer)
+        self._tokenizer = tokenizer
         self._seq_max_len = seq_max_len
         self._max_input = max_input
         if self._seq_max_len > 512:

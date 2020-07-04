@@ -3,7 +3,7 @@ import argparse
 import torch
 import torch.nn as nn
 
-from transformers import BertForMaskedLM
+from transformers import AutoTokenizer, BertForMaskedLM
 import OpenMatch as om
 
 def train(args, model, m_optim, train_loader, device):
@@ -38,7 +38,7 @@ def main():
     parser.add_argument('-eval_every', type=int, default=1000)
     args = parser.parse_args()
 
-    tokenizer = args.vocab
+    tokenizer = AutoTokenizer.from_pretrained(args.vocab)
     print('reading training data...')
     train_set = om.data.datasets.BertMLMDataset(
         dataset=args.train,

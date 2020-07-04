@@ -30,6 +30,8 @@ class Tokenizer():
             self.from_pretrained(self._pretrained)
         elif self._vocab is not None:
             self.from_vocab(self._vocab)
+        else:
+            raise ValueError('Tokenizer must be initialized with vocab.')
 
     def tokenize(self, text: str) -> List[str]:
         raise NotImplementedError('function tokenize not implemented')

@@ -1,3 +1,3 @@
 from OpenMatch.data.dataloader import DataLoader
-from OpenMatch.data import datasets
-from OpenMatch.data import tokenizers
+from OpenMatch.data.datasets import *
+from OpenMatch.data.tokenizers import *

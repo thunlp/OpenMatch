@@ -3,6 +3,7 @@ import argparse
 import torch
 import torch.nn as nn
 
+from transformers import AutoTokenizer
 import OpenMatch as om
 
 def test(args, model, test_loader, device):
@@ -49,7 +50,7 @@ def main():
     args = parser.parse_args()
 
     if args.model == 'bert':
-        tokenizer = args.vocab
+        tokenizer = AutoTokenizer.from_pretrained(args.vocab)
         print('reading test data...')
         test_set = om.data.datasets.BertDataset(
             dataset=args.test,

@@ -1,7 +1,16 @@
 # OpenMatch
+## Train
+For bert-like models training
+```shell
+sh train_bert.sh
+```
 
-## Options
-### Train
+For edrm, cknrm, knrm or tk training
+```shell
+sh train.sh
+```
+
+### Options
 ```
 -task             'ranking': pair-wise, 'classification': query-doc.
 -model            'bert', 'tk', 'edrm', 'cknrm' or 'knrm'.
@@ -25,7 +34,18 @@
 -eval_every       e.g. 1000, every 1000 steps evaluate on dev data.
 ```
 
-### Inference
+## Inference
+For bert-like models inference
+```shell
+sh inference_bert.sh
+```
+
+For edrm, cknrm, knrm or tk inference
+```shell
+sh inference.sh
+```
+
+### Options
 ```
 -task             'ranking': pair-wise, 'classification': query-doc.
 -model            'bert', 'tk', 'edrm', 'cknrm' or 'knrm'.

@@ -3,6 +3,7 @@ import argparse
 import torch
 import torch.nn as nn
 
+from transformers import AutoTokenizer
 import OpenMatch as om
 
 def dev(args, model, dev_loader, device):
@@ -54,7 +55,7 @@ def main():
     args = parser.parse_args()
 
     if args.model == 'bert':
-        tokenizer = args.vocab
+        tokenizer = AutoTokenizer.from_pretrained(args.vocab)
         print('reading dev data...')
         dev_set = om.data.datasets.BertDataset(
             dataset=args.dev,
