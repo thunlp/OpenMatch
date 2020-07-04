@@ -5,6 +5,12 @@ An Open-Source Package for OpenQA and IR.
 ```
 pip install git+https://github.com/thunlp/OpenMatch.git
 ```
+### From Source
+```
+git clone https://github.com/thunlp/OpenMatch.git
+cd OpenMatch
+python setup.py install
+```
 
 ## Quick Start
 For bert training
@@ -28,6 +34,15 @@ sh inference.sh
 ```
 
 More information is available [here](./docs/openmatch.md).
+
+## Neural Ranking Models
+OpenMatch currently provides the following models:
+
+1. [KNRM](./OpenMatch/models/knrm.py): implementation of [End-to-End Neural Ad-hoc Ranking with Kernel Pooling](https://dl.acm.org/doi/pdf/10.1145/3077136.3080809).
+2. [Conv-KNRM](./OpenMatch/models/conv_knrm.py): implementation of [Convolutional Neural Networks for Soft-Matching N-Grams in Ad-hoc Search](https://dl.acm.org/doi/pdf/10.1145/3159652.3159659).
+3. [EDRM](./OpenMatch/models/edrm.py): implementation of [Entity-Duet Neural Ranking: Understanding the Role of Knowledge Graph Semantics in Neural Information Retrieval](https://arxiv.org/pdf/1805.07591.pdf).
+4. [TK](./OpenMatch/models/tk.py): implementation of [Interpretable & Time-Budget-Constrained Contextualization for Re-Ranking](https://arxiv.org/pdf/1912.01385.pdf).
+5. [BERT](./OpenMatch/models/bert.py): using huggingface [transformers](https://github.com/huggingface/transformers), other bert-like models are also available, e.g. electra, scibert.
 
 ## Experiments
 * [TREC-COVID Challenge](./docs/experiments-treccovid.md)
