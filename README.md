@@ -8,9 +8,10 @@ An Open-Source Package for OpenQA and IR.
   [>> Reproduce Our Submit](./docs/experiments-treccovid.md) [>> About COVID-19 Dataset](https://www.semanticscholar.org/cord19)
 
 ## Overview
-> **OpenMatch** integrates excellent neural methods and technologies to provide a complete solution for deep text matching and understanding.
+**OpenMatch** integrates excellent neural methods and technologies to provide a complete solution for deep text matching and understanding.
 
-### **1/ Document Retrival**
+> ### **1/ Document Retrival**
+<!-- ### **1/ Document Retrival** -->
 
   Document Retrival refers to extracting a set of related documents from large-scale document-level data based on user queries.
 <!--
