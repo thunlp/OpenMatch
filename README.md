@@ -54,7 +54,6 @@ Feature Ensemble can fuse neural features learned by neural ranker with the feat
   |2/ Document Reranking|**BERT**|BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding [~Paper](https://arxiv.org/pdf/1810.04805.pdf)|
   ||
   |3/ Knowledge Enhancement|**EDRM**|Entity-Duet Neural Ranking: Understanding the Role of Knowledge Graph Semantics in Neural Information Retrieval [~Paper](https://arxiv.org/pdf/1805.07591.pdf)|
-  ||
   |3/ Data Augmentation|**ReInfoSelect**|Selective Weak Supervision for Neural Information Retrieval [~Paper](https://arxiv.org/pdf/2001.10382v1.pdf)|
 
   Note that the BERT model is following huggingface's implementation - [transformers](https://github.com/huggingface/transformers), so other bert-like models are also available in our toolkit, e.g. electra, scibert.
