@@ -17,7 +17,7 @@ An Open-Source Package for OpenQA and IR.
 <!--
   Document retrival is the process of associating document with user query allowing it to be easily found and retrieved later. -->
 
-### **2/ Document Reranking**
+> ### **2/ Document Reranking**
 
 Document reranking aims to further match user query and documents retrieved by the previous step with the purpose of obtaining a ranked list of relevant documents.
 
@@ -30,11 +30,11 @@ Neural Ranker uses neural network as ranker to reorder documents.
 
 Feature Ensemble can fuse neural features learned by neural ranker with the features of non-neural methods to obtain more robust performance
 
-#### **3/ Domain Transfer Learning**
+> ### **3/ Domain Transfer Learning**
 
   Domain Transfer Learning can leverages external knowledge graphs or weak supervision data to guide and help ranker to overcome data scarcity.
 
-##### **\* Knowledge Enhancemnet**
+#### **\* Knowledge Enhancemnet**
 
   Knowledge Enhancement incorporates entity semantics of external knowledge graphs to enhance neural ranker.
 
