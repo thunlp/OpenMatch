@@ -10,7 +10,7 @@ An Open-Source Package for OpenQA and IR.
 ## Overview
 **OpenMatch** integrates excellent neural methods and technologies to provide a complete solution for deep text matching and understanding.
 
->###1/ Document Retrival
+>### 1/ Document Retrival
 
   Document Retrival refers to extracting a set of related documents from large-scale document-level data based on user queries.
 
@@ -22,7 +22,7 @@ Sparse Retriever is defined as a sparse bag-of-words retrieval model.
 
 Dense Retriever performs retrieval by encoding documents and queries into dense low-dimensional vectors, and selecting the document that has the highest inner product with the query
 
->###2/ Document Reranking
+>### 2/ Document Reranking
 
 Document reranking aims to further match user query and documents retrieved by the previous step with the purpose of obtaining a ranked list of relevant documents.
 
@@ -35,7 +35,7 @@ Neural Ranker uses neural network as ranker to reorder documents.
 
 Feature Ensemble can fuse neural features learned by neural ranker with the features of non-neural methods to obtain more robust performance
 
->###3/ Domain Transfer Learning
+>### 3/ Domain Transfer Learning
 
   Domain Transfer Learning can leverages external knowledge graphs or weak supervision data to guide and help ranker to overcome data scarcity.
 
