@@ -10,40 +10,40 @@ An Open-Source Package for OpenQA and IR.
 ## Overview
 > **OpenMatch** integrates excellent neural methods and technologies to provide a complete solution for deep text matching and understanding.
 
-* **1/ Document Retrival**
+#### **1/ Document Retrival**
 
   Document Retrival refers to extracting a set of related documents from large-scale document-level data based on user queries.
+<!--
+  Document retrival is the process of associating document with user query allowing it to be easily found and retrieved later. -->
 
-  Document retrival is the process of associating document with user query allowing it to be easily found and retrieved later.
+#### **2/ Document Reranking**
 
-* **2/ Document Reranking**
+Document reranking aims to further match user query and documents retrieved by the previous step with the purpose of obtaining a ranked list of relevant documents.
 
-  Document reranking aims to further match user query and documents retrieved by the previous step with the purpose of obtaining a ranked list of relevant documents.
+##### **\* Neural Ranker**
 
-  **\* Neural Ranker**
-
-  Neural Ranker uses neural network as ranker to reorder documents.
+Neural Ranker uses neural network as ranker to reorder documents.
 
 
-  **\* Feature Ensemble**
+##### **\* Feature Ensemble**
 
-  Feature Ensemble can fuse neural features learned by neural ranker with the features of non-neural methods to obtain more robust performance
+Feature Ensemble can fuse neural features learned by neural ranker with the features of non-neural methods to obtain more robust performance
 
-* **3/ Domain Transfer Learning**
+#### **3/ Domain Transfer Learning**
 
   Domain Transfer Learning can leverages external knowledge graphs or weak supervision data to guide and help ranker to overcome data scarcity.
 
-  **\* Knowledge Enhancemnet**
+##### **\* Knowledge Enhancemnet**
 
   Knowledge Enhancement incorporates entity semantics of external knowledge graphs to enhance neural ranker.
 
-  **\* Data Augmentation**
+##### **\* Data Augmentation**
 
   Data Augmentation leverages weak supervision data to improve the ranking accuracy in certain areas that lacks large scale relevance labels.
 
 
   |Stage|Model|Paper|
-  |:----|:----:|:----|
+  |:----:|:----:|:----|
   |1/ Document Retrieval|**BM25**|Best Match25 [~tool](https://github.com/castorini/anserini)|
   |1/ Document Retrieval|**ANN**|Approximate nearest neighbor [~tool](https://github.com/facebookresearch/faiss)|
   ||
@@ -60,11 +60,13 @@ An Open-Source Package for OpenQA and IR.
 
 ## Installation
 
-#### From PyPI
+#### \* From PyPI
+
 ```
 pip install git+https://github.com/thunlp/OpenMatch.git
 ```
-#### From Source
+
+#### \* From Source
 ```
 git clone https://github.com/thunlp/OpenMatch.git
 cd OpenMatch
