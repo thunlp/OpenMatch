@@ -10,49 +10,61 @@ An Open-Source Package for OpenQA and IR.
 ## Overview
 > **OpenMatch** integrates excellent neural methods and technologies to provide a complete solution for deep text matching and understanding.
 
-* **Document Retrieval**
+* **1/ Document Retrival**
 
-  TBD
+  Document Retrival refers to extracting a set of related documents from large-scale document-level data based on user queries.
 
-* **Passage Reranking**
+  Document retrival is the process of associating document with user query allowing it to be easily found and retrieved later.
 
-  Passage Reranking aims to produce a relevance ranked list of passages by matching texts against user queries.
+* **2/ Document Reranking**
 
-* **Knowledge Enhancing**
+  Document reranking aims to further match user query and documents retrieved by the previous step with the purpose of obtaining a ranked list of relevant documents.
 
-  TBD
+  **\* Neural Ranker**
 
-* **Data Augmentation**
+  Neural Ranker uses neural network as ranker to reorder documents.
+
+
+  **\* Feature Ensemble**
+
+  Feature Ensemble can fuse neural features learned by neural ranker with the features of non-neural methods to obtain more robust performance
+
+* **3/ Domain Transfer Learning**
+
+  Domain Transfer Learning can leverages external knowledge graphs or weak supervision data to guide and help ranker to overcome data scarcity.
+
+  **\* Knowledge Enhancemnet**
+
+  Knowledge Enhancement incorporates entity semantics of external knowledge graphs to enhance neural ranker.
+
+  **\* Data Augmentation**
 
   Data Augmentation leverages weak supervision data to improve the ranking accuracy in certain areas that lacks large scale relevance labels.
 
-* **Learning-To-Rank**
-
-  TBD
 
   |Stage|Model|Paper|
   |:----|:----:|:----|
-  |Document Retrieval|**BM25**|TBD|
-  |Document Retrieval|ANN|TBD|
+  |1/ Document Retrieval|**BM25**|Best Match25 [~tool](https://github.com/castorini/anserini)|
+  |1/ Document Retrieval|**ANN**|Approximate nearest neighbor [~tool](https://github.com/facebookresearch/faiss)|
   ||
-  |Passage Reranking|**K-NRM**|[End-to-End Neural Ad-hoc Ranking with Kernel Pooling](https://dl.acm.org/doi/pdf/10.1145/3077136.3080809)|
-  |Passage Reranking|Conv-KNRM|[Convolutional Neural Networks for Soft-Matching N-Grams in Ad-hoc Search](https://dl.acm.org/doi/pdf/10.1145/3159652.3159659)|
-  |Passage Reranking|TK|[Interpretable & Time-Budget-Constrained Contextualization for Re-Ranking](https://arxiv.org/pdf/1912.01385.pdf)|
-  |Passage Reranking|BERT|[BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding](https://arxiv.org/pdf/1810.04805.pdf)|
+  |2/ Document Reranking|**K-NRM**|End-to-End Neural Ad-hoc Ranking with Kernel Pooling [~Paper](https://dl.acm.org/doi/pdf/10.1145/3077136.3080809)|
+  |2/ Document Reranking|**Conv-KNRM**|Convolutional Neural Networks for Soft-Matching N-Grams in Ad-hoc Search [~Paper](https://dl.acm.org/doi/pdf/10.1145/3159652.3159659)|
+  |2/ Document Reranking|**TK**|Interpretable & Time-Budget-Constrained Contextualization for Re-Ranking [~Paper](https://arxiv.org/pdf/1912.01385.pdf)|
+  |2/ Document Reranking|**BERT**|BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding [~Paper](https://arxiv.org/pdf/1810.04805.pdf)|
   ||
-  |Knowledge Enhancing|**EDRM**|[Entity-Duet Neural Ranking: Understanding the Role of Knowledge Graph Semantics in Neural Information Retrieval](https://arxiv.org/pdf/1805.07591.pdf)|
+  |3/ Knowledge Enhancement|**EDRM**|Entity-Duet Neural Ranking: Understanding the Role of Knowledge Graph Semantics in Neural Information Retrieval [~Paper](https://arxiv.org/pdf/1805.07591.pdf)|
   ||
-  |Data Augmentation|**ReInfoSelect**|[Selective Weak Supervision for Neural Information Retrieval](https://arxiv.org/pdf/2001.10382v1.pdf)|
-  ||
-  |Learning-To-Rank|**Coordinate Ascent**|TBD|
+  |3/ Data Augmentation|**ReInfoSelect**|Selective Weak Supervision for Neural Information Retrieval [~Paper](https://arxiv.org/pdf/2001.10382v1.pdf)|
 
-Note that the BERT model is following huggingface's implementation - [transformers](https://github.com/huggingface/transformers), so other bert-like models are also available in our toolkit, e.g. electra, scibert.
+  Note that the BERT model is following huggingface's implementation - [transformers](https://github.com/huggingface/transformers), so other bert-like models are also available in our toolkit, e.g. electra, scibert.
 
 ## Installation
+
+#### From PyPI
 ```
 pip install git+https://github.com/thunlp/OpenMatch.git
 ```
-### From Source
+#### From Source
 ```
 git clone https://github.com/thunlp/OpenMatch.git
 cd OpenMatch
@@ -103,17 +115,15 @@ unzip ./data/glove.6B.zip -d ./data
 ## Experiments
 * All results is measured on ndcg@20 with 5 fold cross-validation.
 
-|Model|ClueWeb09|Robust04|ClueWeb12|
-|:---:|:-------:|:------:|:-------:|
-|KNRM|0.1880|0.3016|0.0968|
-|Conv-KNRM|0.1894|0.2907|0.0896|
-|EDRM|0.2015|0.2993|0.0937|
-|TK|0.2306|0.2822|0.0966|
-|BERT|0.2701|0.4168|0.1183|
-|ELECTRA|0.2861|0.4668|0.1078|
+  |Model|ClueWeb09|Robust04|ClueWeb12|
+  |:---:|:-------:|:------:|:-------:|
+  |KNRM|0.1880|0.3016|0.0968|
+  |Conv-KNRM|0.1894|0.2907|0.0896|
+  |EDRM|0.2015|0.2993|0.0937|
+  |TK|0.2306|0.2822|0.0966|
+  |BERT|0.2701|0.4168|0.1183|
+  |ELECTRA|0.2861|0.4668|0.1078|
 
-## TBD
-ANN
 
 ## Contribution
 Thanks to all the people who contributed to OpenMatch!
