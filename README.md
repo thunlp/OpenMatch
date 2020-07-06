@@ -11,11 +11,16 @@ An Open-Source Package for OpenQA and IR.
 **OpenMatch** integrates excellent neural methods and technologies to provide a complete solution for deep text matching and understanding.
 
 > ### **1/ Document Retrival**
-<!-- ### **1/ Document Retrival** -->
 
   Document Retrival refers to extracting a set of related documents from large-scale document-level data based on user queries.
-<!--
-  Document retrival is the process of associating document with user query allowing it to be easily found and retrieved later. -->
+
+#### **\* Sparse Retrival**
+
+Sparse Retriever is defined as a sparse bag-of-words retrieval model.
+
+#### **\* Dense Retrival**
+
+Dense Retriever performs retrieval by encoding documents and queries into dense low-dimensional vectors, and selecting the document that has the highest inner product with the query
 
 > ### **2/ Document Reranking**
 
@@ -45,13 +50,14 @@ Feature Ensemble can fuse neural features learned by neural ranker with the feat
 
   |Stage|Model|Paper|
   |:----:|:----:|:----|
-  |1/ Document Retrieval|**BM25**|Best Match25 [~tool](https://github.com/castorini/anserini)|
-  |1/ Document Retrieval|**ANN**|Approximate nearest neighbor [~tool](https://github.com/facebookresearch/faiss)|
+  |1/ Sparse Retrival|**BM25**|Best Match25 [~Tool](https://github.com/castorini/anserini)|
+  |1/ Dense Retrival|**ANN**|Approximate nearest neighbor [~Tool](https://github.com/facebookresearch/faiss)|
   ||
-  |2/ Document Reranking|**K-NRM**|End-to-End Neural Ad-hoc Ranking with Kernel Pooling [~Paper](https://dl.acm.org/doi/pdf/10.1145/3077136.3080809)|
-  |2/ Document Reranking|**Conv-KNRM**|Convolutional Neural Networks for Soft-Matching N-Grams in Ad-hoc Search [~Paper](https://dl.acm.org/doi/pdf/10.1145/3159652.3159659)|
-  |2/ Document Reranking|**TK**|Interpretable & Time-Budget-Constrained Contextualization for Re-Ranking [~Paper](https://arxiv.org/pdf/1912.01385.pdf)|
-  |2/ Document Reranking|**BERT**|BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding [~Paper](https://arxiv.org/pdf/1810.04805.pdf)|
+  |2/ Neural Ranker|**K-NRM**|End-to-End Neural Ad-hoc Ranking with Kernel Pooling [~Paper](https://dl.acm.org/doi/pdf/10.1145/3077136.3080809)|
+  |2/ Neural Ranker|**Conv-KNRM**|Convolutional Neural Networks for Soft-Matching N-Grams in Ad-hoc Search [~Paper](https://dl.acm.org/doi/pdf/10.1145/3159652.3159659)|
+  |2/ Neural Ranker|**TK**|Interpretable & Time-Budget-Constrained Contextualization for Re-Ranking [~Paper](https://arxiv.org/pdf/1912.01385.pdf)|
+  |2/ Neural Ranker|**BERT**|BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding [~Paper](https://arxiv.org/pdf/1810.04805.pdf)|
+  |2/ Feature Ensemble|**Coordinate Ascent**|Linear feature-based models for information retrieval. Information Retrieval [~Paper](https://lintool.github.io/Ivory/docs/publications/Metzler_Croft_2007.pdf)
   ||
   |3/ Knowledge Enhancement|**EDRM**|Entity-Duet Neural Ranking: Understanding the Role of Knowledge Graph Semantics in Neural Information Retrieval [~Paper](https://arxiv.org/pdf/1805.07591.pdf)|
   |3/ Data Augmentation|**ReInfoSelect**|Selective Weak Supervision for Neural Information Retrieval [~Paper](https://arxiv.org/pdf/2001.10382v1.pdf)|
