@@ -10,22 +10,22 @@ An Open-Source Package for OpenQA and IR.
 ## Overview
 > **OpenMatch** integrates excellent neural methods and technologies to provide a complete solution for deep text matching and understanding.
 
-#### **1/ Document Retrival**
+### **1/ Document Retrival**
 
   Document Retrival refers to extracting a set of related documents from large-scale document-level data based on user queries.
 <!--
   Document retrival is the process of associating document with user query allowing it to be easily found and retrieved later. -->
 
-#### **2/ Document Reranking**
+### **2/ Document Reranking**
 
 Document reranking aims to further match user query and documents retrieved by the previous step with the purpose of obtaining a ranked list of relevant documents.
 
-##### **\* Neural Ranker**
+#### **\* Neural Ranker**
 
 Neural Ranker uses neural network as ranker to reorder documents.
 
 
-##### **\* Feature Ensemble**
+#### **\* Feature Ensemble**
 
 Feature Ensemble can fuse neural features learned by neural ranker with the features of non-neural methods to obtain more robust performance
 
@@ -37,7 +37,7 @@ Feature Ensemble can fuse neural features learned by neural ranker with the feat
 
   Knowledge Enhancement incorporates entity semantics of external knowledge graphs to enhance neural ranker.
 
-##### **\* Data Augmentation**
+#### **\* Data Augmentation**
 
   Data Augmentation leverages weak supervision data to improve the ranking accuracy in certain areas that lacks large scale relevance labels.
 
@@ -74,7 +74,8 @@ python setup.py install
 ```
 
 ## Quick Start
-Detailed examples are available [here](./docs/openmatch.md).
+
+\*  Detailed examples are available [here](./docs/openmatch.md).
 
 ```python
 import torch
@@ -84,7 +85,8 @@ query = "Classification treatment COVID-19"
 doc = "By retrospectively tracking the dynamic changes of LYM% in death cases and cured cases, this study suggests that lymphocyte count is an effective and reliable indicator for disease classification and prognosis in COVID-19 patients."
 ```
 
-For bert-like models:
+\*  For bert-like models:
+
 ```python
 from transformers import AutoTokenizer
 
@@ -94,7 +96,8 @@ model = om.models.Bert("allenai/scibert_scivocab_uncased")
 ranking_score, ranking_features = model(torch.tensor(input_ids).unsqueeze(0))
 ```
 
-For other models:
+\*  For other models:
+
 ```python
 tokenizer = om.data.tokenizers.WordTokenizer(pretrained="./data/glove.6B.300d.txt")
 query_ids, query_masks = tokenizer.process(query, max_len=16)
@@ -108,14 +111,15 @@ ranking_score, ranking_features = model(torch.tensor(query_ids).unsqueeze(0),
                                         torch.tensor(doc_masks).unsqueeze(0))
 ```
 
-The GloVe can be downloaded using:
+\*  The GloVe can be downloaded using:
+
 ```
 wget http://nlp.stanford.edu/data/glove.6B.zip -P ./data
 unzip ./data/glove.6B.zip -d ./data
 ```
 
 ## Experiments
-* All results is measured on ndcg@20 with 5 fold cross-validation.
+\* All results is measured on ndcg@20 with 5 fold cross-validation.
 
   |Model|ClueWeb09|Robust04|ClueWeb12|
   |:---:|:-------:|:------:|:-------:|
