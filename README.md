@@ -55,7 +55,7 @@ Feature Ensemble can fuse neural features learned by neural ranker with the feat
   ||
   |2/ Neural Ranker|**K-NRM**|End-to-End Neural Ad-hoc Ranking with Kernel Pooling [~Paper](https://dl.acm.org/doi/pdf/10.1145/3077136.3080809)|
   |2/ Neural Ranker|**Conv-KNRM**|Convolutional Neural Networks for Soft-Matching N-Grams in Ad-hoc Search [~Paper](https://dl.acm.org/doi/pdf/10.1145/3159652.3159659)|
-  |2/ Neural Ranker|**TK**|Interpretable & Time-Budget-Constrained Contextualization for Re-Ranking [~Paper](https://arxiv.org/pdf/1912.01385.pdf)|
+  |2/ Neural Ranker|**TK**|Interpretable & Time-Budget-Constrained Contextualization for Re-Ranking [~Paper](https://arxiv.org/pdf/2002.01854.pdf)|
   |2/ Neural Ranker|**BERT**|BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding [~Paper](https://arxiv.org/pdf/1810.04805.pdf)|
   |2/ Feature Ensemble|**Coordinate Ascent**|Linear feature-based models for information retrieval. Information Retrieval [~Paper](https://lintool.github.io/Ivory/docs/publications/Metzler_Croft_2007.pdf)
   ||
