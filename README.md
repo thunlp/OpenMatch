@@ -10,6 +10,16 @@ An Open-Source Package for OpenQA and IR.
 ## Overview
 **OpenMatch** integrates excellent neural methods and technologies to provide a complete solution for deep text matching and understanding.
 
+|Document Retrieval|Document Reranking|Domain Transfer Learning|
+|:-----------------|:-----------------|:-----------------------|
+|BM25|K-NRM|EDRM|
+|ANN|Conv-KNRM|ReInfoSelect|
+||TK||
+||BERT||
+||Coor-Ascent||
+
+Note that the BERT model is following huggingface's implementation - [transformers](https://github.com/huggingface/transformers), so other bert-like models are also available in our toolkit, e.g. electra, scibert.
+
 >### 1/ Document Retrival
 
   Document Retrival refers to extracting a set of related documents from large-scale document-level data based on user queries.
@@ -61,8 +71,6 @@ Feature Ensemble can fuse neural features learned by neural ranker with the feat
   ||
   |3/ Knowledge Enhancement|**EDRM**|Entity-Duet Neural Ranking: Understanding the Role of Knowledge Graph Semantics in Neural Information Retrieval [~Paper](https://arxiv.org/pdf/1805.07591.pdf)|
   |3/ Data Augmentation|**ReInfoSelect**|Selective Weak Supervision for Neural Information Retrieval [~Paper](https://arxiv.org/pdf/2001.10382v1.pdf)|
-
-  Note that the BERT model is following huggingface's implementation - [transformers](https://github.com/huggingface/transformers), so other bert-like models are also available in our toolkit, e.g. electra, scibert.
 
 ## Installation
 
