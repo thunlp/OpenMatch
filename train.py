@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 from torch.distributions import Categorical
 
-from transformers import AutoTokenizer
+from transformers import AutoTokenizer, get_linear_schedule_with_warmup
 import OpenMatch as om
 
 def dev(args, model, metric, dev_loader, device):
@@ -33,7 +33,7 @@ def dev(args, model, metric, dev_loader, device):
                     rst_dict[q_id] = [(b_s, d_id, l)]
     return rst_dict
 
-def train_reinfoselect(args, model, policy, loss_fn, m_optim, p_optim, metric, train_loader, dev_loader, device):
+def train_reinfoselect(args, model, policy, loss_fn, m_optim, m_scheduler, p_optim, p_scheduler, metric, train_loader, dev_loader, device):
     best_mes = 0.0
     with torch.no_grad():
         rst_dict = dev(args, model, metric, dev_loader, device)
@@ -54,8 +54,6 @@ def train_reinfoselect(args, model, policy, loss_fn, m_optim, p_optim, metric, t
     for epoch in range(args.epoch):
         avg_loss = 0.0
         for step, train_batch in enumerate(train_loader):
-            model.zero_grad()
-            policy.zero_grad()
             if args.model == 'bert':
                 if args.task == 'ranking':
                     batch_probs, _ = policy(train_batch['input_ids_pos'].to(device), train_batch['input_mask_pos'].to(device), train_batch['segment_ids_pos'].to(device))
@@ -107,8 +105,11 @@ def train_reinfoselect(args, model, policy, loss_fn, m_optim, p_optim, metric, t
                     raise ValueError('Task must be `ranking` or `classification`.')
             dist = Categorical(batch_probs.softmax(dim=-1))
             action = dist.sample()
+            if action.sum().item() < 1:
+                m_scheduler.step()
+                p_scheduler.step()
+                continue
             mask = action.ge(0.5)
-            weights = action.clone().detach().float().requires_grad_(False)
             log_prob_p = torch.masked_select(dist.log_prob(action), mask)
             log_prob_n = torch.masked_select(dist.log_prob(1-action), mask)
 
@@ -120,10 +121,12 @@ def train_reinfoselect(args, model, policy, loss_fn, m_optim, p_optim, metric, t
                 raise ValueError('Task must be `ranking` or `classification`.')
             if torch.cuda.device_count() > 1:
                 batch_loss = batch_loss.mean(-1)
-            batch_loss = batch_loss.mul(weights).mean()
+            batch_loss = batch_loss.mean()
             avg_loss += batch_loss.item()
             batch_loss.backward()
             m_optim.step()
+            m_scheduler.step()
+            m_optim.zero_grad()
 
             with torch.no_grad():
                 rst_dict = dev(args, model, metric, dev_loader, device)
@@ -150,13 +153,14 @@ def train_reinfoselect(args, model, policy, loss_fn, m_optim, p_optim, metric, t
                 policy_loss = (log_prob_n * reward).sum().unsqueeze(-1)
             policy_loss.backward()
             p_optim.step()
+            p_scheduler.step()
+            p_optim.zero_grad()
 
-def train(args, model, loss_fn, m_optim, metric, train_loader, dev_loader, device):
+def train(args, model, loss_fn, m_optim, m_scheduler, metric, train_loader, dev_loader, device):
     best_mes = 0.0
     for epoch in range(args.epoch):
         avg_loss = 0.0
         for step, train_batch in enumerate(train_loader):
-            model.zero_grad()
             if args.model == 'bert':
                 if args.task == 'ranking':
                     batch_score_pos, _ = model(train_batch['input_ids_pos'].to(device), train_batch['input_mask_pos'].to(device), train_batch['segment_ids_pos'].to(device))
@@ -207,6 +211,8 @@ def train(args, model, loss_fn, m_optim, metric, train_loader, dev_loader, devic
             avg_loss += batch_loss.item()
             batch_loss.backward()
             m_optim.step()
+            m_scheduler.step()
+            m_optim.zero_grad()
 
             if (step+1) % args.eval_every == 0:
                 with torch.no_grad():
@@ -247,6 +253,7 @@ def main():
     parser.add_argument('-epoch', type=int, default=1)
     parser.add_argument('-batch_size', type=int, default=8)
     parser.add_argument('-lr', type=float, default=2e-5)
+    parser.add_argument('-n_warmup_steps', type=int, default=1000)
     parser.add_argument('-eval_every', type=int, default=1000)
     args = parser.parse_args()
 
@@ -431,8 +438,10 @@ def main():
         else:
             raise ValueError('Task must be `ranking` or `classification`.')
     m_optim = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr)
+    m_scheduler = get_linear_schedule_with_warmup(m_optim, num_warmup_steps=args.n_warmup_steps, num_training_steps=len(train_set)*args.epoch//args.batch_size)
     if args.reinfoselect:
         p_optim = torch.optim.Adam(filter(lambda p: p.requires_grad, policy.parameters()), lr=args.lr)
+        p_scheduler = get_linear_schedule_with_warmup(p_optim, num_warmup_steps=args.n_warmup_steps, num_training_steps=len(train_set)*args.epoch//args.batch_size)
     metric = om.metrics.Metric()
 
     model.to(device)
@@ -444,9 +453,9 @@ def main():
         loss_fn = nn.DataParallel(loss_fn)
 
     if args.reinfoselect:
-        train_reinfoselect(args, model, policy, loss_fn, m_optim, p_optim, metric, train_loader, dev_loader, device)
+        train_reinfoselect(args, model, policy, loss_fn, m_optim, m_scheduler, p_optim, p_scheduler, metric, train_loader, dev_loader, device)
     else:
-        train(args, model, loss_fn, m_optim, metric, train_loader, dev_loader, device)
+        train(args, model, loss_fn, m_optim, m_scheduler, metric, train_loader, dev_loader, device)
 
 if __name__ == "__main__":
     main()
