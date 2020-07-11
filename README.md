@@ -1,5 +1,5 @@
 # OpenMatch
-An Open-Source Package for OpenQA and IR.
+An Open-Source Package for Information Retrieval.
 
 ## 😃 What's New
 * **[Top Spot on TREC-COVID Challenge](https://ir.nist.gov/covidSubmit/about.html)** (May 2020, Round2)
