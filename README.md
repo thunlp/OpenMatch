@@ -148,7 +148,7 @@ unzip ./data/glove.6B.zip -d ./data
 ## Contribution
 Thanks to all the people who contributed to OpenMatch!
 
-[Kaitao Zhang](https://github.com/zkt12), [Aowei Lu](https://github.com/LAW991224), [Si Sun](https://github.com/SunSiShining), [Zhenghao Liu](http://nlp.csai.tsinghua.edu.cn/~lzh/)
+[Kaitao Zhang](https://github.com/zkt12), [Si Sun](https://github.com/SunSiShining), [Zhenghao Liu](http://nlp.csai.tsinghua.edu.cn/~lzh/), [Aowei Lu](https://github.com/LAW991224)
 
 ## Project Organizers
 - Zhiyuan Liu
@@ -157,3 +157,6 @@ Thanks to all the people who contributed to OpenMatch!
 - Chenyan Xiong
   * Microsoft Research AI
   * [Homepage](https://www.microsoft.com/en-us/research/people/cxiong/)
+- Maosong Sun
+  * Tsinghua University
+  * [Homepage](http://nlp.csai.tsinghua.edu.cn/staff/sms/)

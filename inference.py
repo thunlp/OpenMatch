@@ -11,7 +11,7 @@ def test(args, model, test_loader, device):
     for test_batch in test_loader:
         query_id, doc_id, retrieval_score = test_batch['query_id'], test_batch['doc_id'], test_batch['retrieval_score']
         with torch.no_grad():
-            if args.model == 'bert':
+            if args.model == 'bert' or args.model == 'roberta':
                 batch_score, _ = model(test_batch['input_ids'].to(device), test_batch['input_mask'].to(device), test_batch['segment_ids'].to(device))
             elif args.model == 'edrm':
                 batch_score, _ = model(test_batch['query_wrd_idx'].to(device), test_batch['query_wrd_mask'].to(device),
@@ -49,10 +49,23 @@ def main():
     parser.add_argument('-batch_size', type=int, default=32)
     args = parser.parse_args()
 
+    args.model = args.model.lower()
     if args.model == 'bert':
         tokenizer = AutoTokenizer.from_pretrained(args.vocab)
         print('reading test data...')
         test_set = om.data.datasets.BertDataset(
+            dataset=args.test,
+            tokenizer=tokenizer,
+            mode='test',
+            query_max_len=args.max_query_len,
+            doc_max_len=args.max_doc_len,
+            max_input=args.max_input,
+            task=args.task
+        )
+    elif args.model == 'roberta':
+        tokenizer = AutoTokenizer.from_pretrained(args.vocab)
+        print('reading test data...')
+        test_set = om.data.datasets.RobertaDataset(
             dataset=args.test,
             tokenizer=tokenizer,
             mode='test',
@@ -103,13 +116,13 @@ def main():
         num_workers=8
     )
 
-    if args.model.lower() == 'bert':
+    if args.model == 'bert' or 'roberta':
         model = om.models.Bert(
             pretrained=args.pretrain,
             enc_dim=768,
             task=args.task
         )
-    elif args.model.lower() == 'edrm':
+    elif args.model == 'edrm':
         model = om.models.EDRM(
             wrd_vocab_size=tokenizer.get_vocab_size(),
             ent_vocab_size=ent_tokenizer.get_vocab_size(),
@@ -124,7 +137,7 @@ def main():
             ent_embed_matrix=None,
             task=args.task
         )
-    elif args.model.lower() == 'tk':
+    elif args.model == 'tk':
         model = om.models.TK(
             vocab_size=tokenizer.get_vocab_size(),
             embed_dim=tokenizer.get_embed_dim(),
@@ -136,7 +149,7 @@ def main():
             embed_matrix=tokenizer.get_embed_matrix(),
             task=args.task
         )
-    elif args.model.lower() == 'cknrm':
+    elif args.model == 'cknrm':
         model = om.models.ConvKNRM(
             vocab_size=tokenizer.get_vocab_size(),
             embed_dim=tokenizer.get_embed_dim(),
@@ -146,7 +159,7 @@ def main():
             embed_matrix=tokenizer.get_embed_matrix(),
             task=args.task
         )
-    elif args.model.lower() == 'knrm':
+    elif args.model == 'knrm':
         model = on.models.KNRM(
             vocab_size=tokenizer.get_vocab_size(),
             embed_dim=tokenizer.get_embed_dim(),

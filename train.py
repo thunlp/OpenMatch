@@ -12,7 +12,7 @@ def dev(args, model, metric, dev_loader, device):
     for dev_batch in dev_loader:
         query_id, doc_id, label, retrieval_score = dev_batch['query_id'], dev_batch['doc_id'], dev_batch['label'], dev_batch['retrieval_score']
         with torch.no_grad():
-            if args.model == 'bert':
+            if args.model == 'bert' or args.model == 'roberta':
                 batch_score, _ = model(dev_batch['input_ids'].to(device), dev_batch['input_mask'].to(device), dev_batch['segment_ids'].to(device))
             elif args.model == 'edrm':
                 batch_score, _ = model(dev_batch['query_wrd_idx'].to(device), dev_batch['query_wrd_mask'].to(device),
@@ -54,7 +54,7 @@ def train_reinfoselect(args, model, policy, loss_fn, m_optim, m_scheduler, p_opt
     for epoch in range(args.epoch):
         avg_loss = 0.0
         for step, train_batch in enumerate(train_loader):
-            if args.model == 'bert':
+            if args.model == 'bert' or args.model == 'roberta':
                 if args.task == 'ranking':
                     batch_probs, _ = policy(train_batch['input_ids_pos'].to(device), train_batch['input_mask_pos'].to(device), train_batch['segment_ids_pos'].to(device))
                     batch_score_pos, _ = model(train_batch['input_ids_pos'].to(device), train_batch['input_mask_pos'].to(device), train_batch['segment_ids_pos'].to(device))
@@ -161,7 +161,7 @@ def train(args, model, loss_fn, m_optim, m_scheduler, metric, train_loader, dev_
     for epoch in range(args.epoch):
         avg_loss = 0.0
         for step, train_batch in enumerate(train_loader):
-            if args.model == 'bert':
+            if args.model == 'bert' or args.model == 'roberta':
                 if args.task == 'ranking':
                     batch_score_pos, _ = model(train_batch['input_ids_pos'].to(device), train_batch['input_mask_pos'].to(device), train_batch['segment_ids_pos'].to(device))
                     batch_score_neg, _ = model(train_batch['input_ids_neg'].to(device), train_batch['input_mask_neg'].to(device), train_batch['segment_ids_neg'].to(device))
@@ -257,6 +257,7 @@ def main():
     parser.add_argument('-eval_every', type=int, default=1000)
     args = parser.parse_args()
 
+    args.model = args.model.lower()
     if args.model == 'bert':
         tokenizer = AutoTokenizer.from_pretrained(args.vocab)
         print('reading training data...')
@@ -271,6 +272,28 @@ def main():
         )
         print('reading dev data...')
         dev_set = om.data.datasets.BertDataset(
+            dataset=args.dev,
+            tokenizer=tokenizer,
+            mode='dev',
+            query_max_len=args.max_query_len,
+            doc_max_len=args.max_doc_len,
+            max_input=args.max_input,
+            task=args.task
+        )
+    elif args.model == 'roberta':
+        tokenizer = AutoTokenizer.from_pretrained(args.vocab)
+        print('reading training data...')
+        train_set = om.data.datasets.RobertaDataset(
+            dataset=args.train,
+            tokenizer=tokenizer,
+            mode='train',
+            query_max_len=args.max_query_len,
+            doc_max_len=args.max_doc_len,
+            max_input=args.max_input,
+            task=args.task
+        )
+        print('reading dev data...')
+        dev_set = om.data.datasets.RobertaDataset(
             dataset=args.dev,
             tokenizer=tokenizer,
             mode='dev',
@@ -350,7 +373,7 @@ def main():
         num_workers=8
     )
 
-    if args.model.lower() == 'bert':
+    if args.model == 'bert' or 'roberta':
         model = om.models.Bert(
             pretrained=args.pretrain,
             enc_dim=768,
@@ -362,7 +385,7 @@ def main():
                 enc_dim=768,
                 task='classification'
             )
-    elif args.model.lower() == 'edrm':
+    elif args.model == 'edrm':
         model = om.models.EDRM(
             wrd_vocab_size=tokenizer.get_vocab_size(),
             ent_vocab_size=ent_tokenizer.get_vocab_size(),
@@ -377,7 +400,7 @@ def main():
             ent_embed_matrix=None,
             task=args.task
         )
-    elif args.model.lower() == 'tk':
+    elif args.model == 'tk':
         model = om.models.TK(
             vocab_size=tokenizer.get_vocab_size(),
             embed_dim=tokenizer.get_embed_dim(),
@@ -389,7 +412,7 @@ def main():
             embed_matrix=tokenizer.get_embed_matrix(),
             task=args.task
         )
-    elif args.model.lower() == 'cknrm':
+    elif args.model == 'cknrm':
         model = om.models.ConvKNRM(
             vocab_size=tokenizer.get_vocab_size(),
             embed_dim=tokenizer.get_embed_dim(),
@@ -399,7 +422,7 @@ def main():
             embed_matrix=tokenizer.get_embed_matrix(),
             task=args.task
         )
-    elif args.model.lower() == 'knrm':
+    elif args.model == 'knrm':
         model = om.models.KNRM(
             vocab_size=tokenizer.get_vocab_size(),
             embed_dim=tokenizer.get_embed_dim(),
@@ -410,7 +433,7 @@ def main():
     else:
         raise ValueError('model name error.')
 
-    if args.reinfoselect and args.model.lower() != 'bert':
+    if args.reinfoselect and args.model != 'bert':
         policy = om.models.ConvKNRM(
             vocab_size=tokenizer.get_vocab_size(),
             embed_dim=tokenizer.get_embed_dim(),
