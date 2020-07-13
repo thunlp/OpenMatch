@@ -10,8 +10,6 @@ An Open-Source Package for Information Retrieval.
 ## Overview
 **OpenMatch** integrates excellent neural methods and technologies to provide a complete solution for deep text matching and understanding.
 
-![Framework](./framework.png)
-
 >### 1/ Document Retrieval
 
   Document Retrieval refers to extracting a set of related documents from large-scale document-level data based on user queries.
