@@ -10,6 +10,8 @@ An Open-Source Package for Information Retrieval.
 ## Overview
 **OpenMatch** integrates excellent neural methods and technologies to provide a complete solution for deep text matching and understanding.
 
+![Framework](./framework.png)
+
 |Document Retrieval|Document Reranking|Domain Transfer Learning|
 |:-----------------|:-----------------|:-----------------------|
 |BM25|K-NRM|EDRM|
@@ -20,15 +22,15 @@ An Open-Source Package for Information Retrieval.
 
 Note that the BERT model is following huggingface's implementation - [transformers](https://github.com/huggingface/transformers), so other bert-like models are also available in our toolkit, e.g. electra, scibert.
 
->### 1/ Document Retrival
+>### 1/ Document Retrieval
 
-  Document Retrival refers to extracting a set of related documents from large-scale document-level data based on user queries.
+  Document Retrieval refers to extracting a set of related documents from large-scale document-level data based on user queries.
 
-### **\* Sparse Retrival**
+### **\* Sparse Retrieval**
 
 Sparse Retriever is defined as a sparse bag-of-words retrieval model.
 
-### **\* Dense Retrival**
+### **\* Dense Retrieval**
 
 Dense Retriever performs retrieval by encoding documents and queries into dense low-dimensional vectors, and selecting the document that has the highest inner product with the query
 
@@ -60,8 +62,8 @@ Feature Ensemble can fuse neural features learned by neural ranker with the feat
 
   |Stage|Model|Paper|
   |:----|:----:|:----|
-  |1/ Sparse Retrival|**BM25**|Best Match25 [~Tool](https://github.com/castorini/anserini)|
-  |1/ Dense Retrival|**ANN**|Approximate nearest neighbor [~Tool](https://github.com/facebookresearch/faiss)|
+  |1/ Sparse Retrieval|**BM25**|Best Match25 [~Tool](https://github.com/castorini/anserini)|
+  |1/ Dense Retrieval|**ANN**|Approximate nearest neighbor [~Tool](https://github.com/facebookresearch/faiss)|
   ||
   |2/ Neural Ranker|**K-NRM**|End-to-End Neural Ad-hoc Ranking with Kernel Pooling [~Paper](https://dl.acm.org/doi/pdf/10.1145/3077136.3080809)|
   |2/ Neural Ranker|**Conv-KNRM**|Convolutional Neural Networks for Soft-Matching N-Grams in Ad-hoc Search [~Paper](https://dl.acm.org/doi/pdf/10.1145/3159652.3159659)|
