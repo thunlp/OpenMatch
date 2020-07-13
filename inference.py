@@ -11,8 +11,10 @@ def test(args, model, test_loader, device):
     for test_batch in test_loader:
         query_id, doc_id, retrieval_score = test_batch['query_id'], test_batch['doc_id'], test_batch['retrieval_score']
         with torch.no_grad():
-            if args.model == 'bert' or args.model == 'roberta':
+            if args.model == 'bert':
                 batch_score, _ = model(test_batch['input_ids'].to(device), test_batch['input_mask'].to(device), test_batch['segment_ids'].to(device))
+            elif args.model == 'roberta':
+                batch_score, _ = model(test_batch['input_ids'].to(device), test_batch['input_mask'].to(device))
             elif args.model == 'edrm':
                 batch_score, _ = model(test_batch['query_wrd_idx'].to(device), test_batch['query_wrd_mask'].to(device),
                                        test_batch['doc_wrd_idx'].to(device), test_batch['doc_wrd_mask'].to(device),

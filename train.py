@@ -12,8 +12,10 @@ def dev(args, model, metric, dev_loader, device):
     for dev_batch in dev_loader:
         query_id, doc_id, label, retrieval_score = dev_batch['query_id'], dev_batch['doc_id'], dev_batch['label'], dev_batch['retrieval_score']
         with torch.no_grad():
-            if args.model == 'bert' or args.model == 'roberta':
+            if args.model == 'bert':
                 batch_score, _ = model(dev_batch['input_ids'].to(device), dev_batch['input_mask'].to(device), dev_batch['segment_ids'].to(device))
+            elif args.model == 'roberta':
+                batch_score, _ = model(dev_batch['input_ids'].to(device), dev_batch['input_mask'].to(device))
             elif args.model == 'edrm':
                 batch_score, _ = model(dev_batch['query_wrd_idx'].to(device), dev_batch['query_wrd_mask'].to(device),
                                        dev_batch['doc_wrd_idx'].to(device), dev_batch['doc_wrd_mask'].to(device),
@@ -54,7 +56,7 @@ def train_reinfoselect(args, model, policy, loss_fn, m_optim, m_scheduler, p_opt
     for epoch in range(args.epoch):
         avg_loss = 0.0
         for step, train_batch in enumerate(train_loader):
-            if args.model == 'bert' or args.model == 'roberta':
+            if args.model == 'bert':
                 if args.task == 'ranking':
                     batch_probs, _ = policy(train_batch['input_ids_pos'].to(device), train_batch['input_mask_pos'].to(device), train_batch['segment_ids_pos'].to(device))
                     batch_score_pos, _ = model(train_batch['input_ids_pos'].to(device), train_batch['input_mask_pos'].to(device), train_batch['segment_ids_pos'].to(device))
@@ -62,6 +64,16 @@ def train_reinfoselect(args, model, policy, loss_fn, m_optim, m_scheduler, p_opt
                 elif args.task == 'classification':
                     batch_probs, _ = policy(train_batch['input_ids'].to(device), train_batch['input_mask'].to(device), train_batch['segment_ids'].to(device))
                     batch_score, _ = model(train_batch['input_ids'].to(device), train_batch['input_mask'].to(device), train_batch['segment_ids'].to(device))
+                else:
+                    raise ValueError('Task must be `ranking` or `classification`.')
+            elif args.model == 'roberta':
+                if args.task == 'ranking':
+                    batch_probs, _ = policy(train_batch['input_ids_pos'].to(device), train_batch['input_mask_pos'].to(device))
+                    batch_score_pos, _ = model(train_batch['input_ids_pos'].to(device), train_batch['input_mask_pos'].to(device))
+                    batch_score_neg, _ = model(train_batch['input_ids_neg'].to(device), train_batch['input_mask_neg'].to(device))
+                elif args.task == 'classification':
+                    batch_probs, _ = policy(train_batch['input_ids'].to(device), train_batch['input_mask'].to(device))
+                    batch_score, _ = model(train_batch['input_ids'].to(device), train_batch['input_mask'].to(device))
                 else:
                     raise ValueError('Task must be `ranking` or `classification`.')
             elif args.model == 'edrm':
@@ -161,12 +173,20 @@ def train(args, model, loss_fn, m_optim, m_scheduler, metric, train_loader, dev_
     for epoch in range(args.epoch):
         avg_loss = 0.0
         for step, train_batch in enumerate(train_loader):
-            if args.model == 'bert' or args.model == 'roberta':
+            if args.model == 'bert':
                 if args.task == 'ranking':
                     batch_score_pos, _ = model(train_batch['input_ids_pos'].to(device), train_batch['input_mask_pos'].to(device), train_batch['segment_ids_pos'].to(device))
                     batch_score_neg, _ = model(train_batch['input_ids_neg'].to(device), train_batch['input_mask_neg'].to(device), train_batch['segment_ids_neg'].to(device))
                 elif args.task == 'classification':
                     batch_score, _ = model(train_batch['input_ids'].to(device), train_batch['input_mask'].to(device), train_batch['segment_ids'].to(device))
+                else:
+                    raise ValueError('Task must be `ranking` or `classification`.')
+            elif args.model == 'roberta':
+                if args.task == 'ranking':
+                    batch_score_pos, _ = model(train_batch['input_ids_pos'].to(device), train_batch['input_mask_pos'].to(device))
+                    batch_score_neg, _ = model(train_batch['input_ids_neg'].to(device), train_batch['input_mask_neg'].to(device))
+                elif args.task == 'classification':
+                    batch_score, _ = model(train_batch['input_ids'].to(device), train_batch['input_mask'].to(device))
                 else:
                     raise ValueError('Task must be `ranking` or `classification`.')
             elif args.model == 'edrm':

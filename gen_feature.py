@@ -11,8 +11,10 @@ def dev(args, model, dev_loader, device):
     for dev_batch in dev_loader:
         query_id, doc_id, label, retrieval_score = dev_batch['query_id'], dev_batch['doc_id'], dev_batch['label'], dev_batch['retrieval_score']
         with torch.no_grad():
-            if args.model == 'bert' or args.model == 'roberta':
+            if args.model == 'bert':
                 batch_score, batch_feature = model(dev_batch['input_ids'].to(device), dev_batch['input_mask'].to(device), dev_batch['segment_ids'].to(device))
+            elif args.model == 'roberta':
+                batch_score, batch_feature = model(dev_batch['input_ids'].to(device), dev_batch['input_mask'].to(device))
             elif args.model == 'edrm':
                 batch_score, batch_feature = model(dev_batch['query_wrd_idx'].to(device), dev_batch['query_wrd_mask'].to(device),
                                                    dev_batch['doc_wrd_idx'].to(device), dev_batch['doc_wrd_mask'].to(device),

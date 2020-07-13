@@ -90,19 +90,16 @@ class RobertaDataset(Dataset):
         if self._mode == 'train':
             if self._task == 'ranking':
                 input_ids_pos = torch.tensor([item['input_ids_pos'] for item in batch])
-                segment_ids_pos = torch.tensor([item['segment_ids_pos'] for item in batch])
                 input_mask_pos = torch.tensor([item['input_mask_pos'] for item in batch])
                 input_ids_neg = torch.tensor([item['input_ids_neg'] for item in batch])
-                segment_ids_neg = torch.tensor([item['segment_ids_neg'] for item in batch])
                 input_mask_neg = torch.tensor([item['input_mask_neg'] for item in batch])
-                return {'input_ids_pos': input_ids_pos, 'segment_ids_pos': segment_ids_pos, 'input_mask_pos': input_mask_pos,
-                        'input_ids_neg': input_ids_neg, 'segment_ids_neg': segment_ids_neg, 'input_mask_neg': input_mask_neg}
+                return {'input_ids_pos': input_ids_pos, 'input_mask_pos': input_mask_pos,
+                        'input_ids_neg': input_ids_neg, 'input_mask_neg': input_mask_neg}
             elif self._task == 'classification':
                 input_ids = torch.tensor([item['input_ids'] for item in batch])
-                segment_ids = torch.tensor([item['segment_ids'] for item in batch])
                 input_mask = torch.tensor([item['input_mask'] for item in batch])
                 label = torch.tensor([item['label'] for item in batch])
-                return {'input_ids': input_ids, 'segment_ids': segment_ids, 'input_mask': input_mask, 'label': label}
+                return {'input_ids': input_ids, 'input_mask': input_mask, 'label': label}
             else:
                 raise ValueError('Task must be `ranking` or `classification`.')
         elif self._mode == 'dev':
@@ -111,38 +108,33 @@ class RobertaDataset(Dataset):
             label = [item['label'] for item in batch]
             retrieval_score = torch.tensor([item['retrieval_score'] for item in batch])
             input_ids = torch.tensor([item['input_ids'] for item in batch])
-            segment_ids = torch.tensor([item['segment_ids'] for item in batch])
             input_mask = torch.tensor([item['input_mask'] for item in batch])
             return {'query_id': query_id, 'doc_id': doc_id, 'label': label, 'retrieval_score': retrieval_score,
-                    'input_ids': input_ids, 'segment_ids': segment_ids, 'input_mask': input_mask}
+                    'input_ids': input_ids, 'input_mask': input_mask}
         elif self._mode == 'test':
             query_id = [item['query_id'] for item in batch]
             doc_id = [item['doc_id'] for item in batch]
             retrieval_score = torch.tensor([item['retrieval_score'] for item in batch])
             input_ids = torch.tensor([item['input_ids'] for item in batch])
-            segment_ids = torch.tensor([item['segment_ids'] for item in batch])
             input_mask = torch.tensor([item['input_mask'] for item in batch])
             return {'query_id': query_id, 'doc_id': doc_id, 'retrieval_score': retrieval_score,
-                    'input_ids': input_ids, 'segment_ids': segment_ids, 'input_mask': input_mask}
+                    'input_ids': input_ids, 'input_mask': input_mask}
         else:
             raise ValueError('Mode must be `train`, `dev` or `test`.')
 
     def pack_roberta_features(self, query_tokens: List[str], doc_tokens: List[str]):
         input_tokens = [self._tokenizer.cls_token] + query_tokens + [self._tokenizer.sep_token] * 2 + doc_tokens + [self._tokenizer.sep_token]
         input_ids = self._tokenizer.convert_tokens_to_ids(input_tokens)
-        segment_ids = [0] * len(input_tokens)
-        input_mask = [1] + [0] * len(query_tokens) + [1] * 2 + [0] * len(doc_tokens) + [1]
+        input_mask = [1] * len(input_tokens)
 
         padding_len = self._seq_max_len - len(input_ids)
         input_ids = input_ids + [self._tokenizer.pad_token_id] * padding_len
-        input_mask = input_mask + [1] * padding_len
-        segment_ids = segment_ids + [0] * padding_len
+        input_mask = input_mask + [0] * padding_len
 
         assert len(input_ids) == self._seq_max_len
         assert len(input_mask) == self._seq_max_len
-        assert len(segment_ids) == self._seq_max_len
 
-        return input_ids, input_mask, segment_ids
+        return input_ids, input_mask
 
     def __getitem__(self, index: int) -> Dict[str, Any]:
         example = self._examples[index]
@@ -159,32 +151,32 @@ class RobertaDataset(Dataset):
                 doc_tokens_pos = self._tokenizer.tokenize(example['doc_pos'])[:self._doc_max_len]
                 doc_tokens_neg = self._tokenizer.tokenize(example['doc_neg'])[:self._doc_max_len]
 
-                input_ids_pos, input_mask_pos, segment_ids_pos = self.pack_roberta_features(query_tokens, doc_tokens_pos)
-                input_ids_neg, input_mask_neg, segment_ids_neg = self.pack_roberta_features(query_tokens, doc_tokens_neg)
-                return {'input_ids_pos': input_ids_pos, 'segment_ids_pos': segment_ids_pos, 'input_mask_pos': input_mask_pos,
-                        'input_ids_neg': input_ids_neg, 'segment_ids_neg': segment_ids_neg, 'input_mask_neg': input_mask_neg}
+                input_ids_pos, input_mask_pos = self.pack_roberta_features(query_tokens, doc_tokens_pos)
+                input_ids_neg, input_mask_neg = self.pack_roberta_features(query_tokens, doc_tokens_neg)
+                return {'input_ids_pos': input_ids_pos, 'input_mask_pos': input_mask_pos,
+                        'input_ids_neg': input_ids_neg, 'input_mask_neg': input_mask_neg}
             elif self._task == 'classification':
                 query_tokens = self._tokenizer.tokenize(example['query'])[:self._query_max_len]
                 doc_tokens = self._tokenizer.tokenize(example['doc'])[:self._doc_max_len]
                 
-                input_ids, input_mask, segment_ids = self.pack_roberta_features(query_tokens, doc_tokens)
-                return {'input_ids': input_ids, 'segment_ids': segment_ids, 'input_mask': input_mask, 'label': example['label']}
+                input_ids, input_mask = self.pack_roberta_features(query_tokens, doc_tokens)
+                return {'input_ids': input_ids, 'input_mask': input_mask, 'label': example['label']}
             else:
                 raise ValueError('Task must be `ranking` or `classification`.')
         elif self._mode == 'dev':
             query_tokens = self._tokenizer.tokenize(example['query'])[:self._query_max_len]
             doc_tokens = self._tokenizer.tokenize(example['doc'])[:self._doc_max_len]
 
-            input_ids, input_mask, segment_ids = self.pack_roberta_features(query_tokens, doc_tokens)
+            input_ids, input_mask = self.pack_roberta_features(query_tokens, doc_tokens)
             return {'query_id': example['query_id'], 'doc_id': example['paper_id'], 'label': example['label'], 'retrieval_score': example['retrieval_score'],
-                    'input_ids': input_ids, 'input_mask': input_mask, 'segment_ids': segment_ids}
+                    'input_ids': input_ids, 'input_mask': input_mask}
         elif self._mode == 'test':
             query_tokens = self._tokenizer.tokenize(example['query'])[:self._query_max_len]
             doc_tokens = self._tokenizer.tokenize(example['doc'])[:self._doc_max_len]
 
-            input_ids, input_mask, segment_ids = self.pack_roberta_features(query_tokens, doc_tokens)
+            input_ids, input_mask = self.pack_roberta_features(query_tokens, doc_tokens)
             return {'query_id': example['query_id'], 'doc_id': example['paper_id'], 'retrieval_score': example['retrieval_score'],
-                    'input_ids': input_ids, 'input_mask': input_mask, 'segment_ids': segment_ids}
+                    'input_ids': input_ids, 'input_mask': input_mask}
         else:
             raise ValueError('Mode must be `train`, `dev` or `test`.')
 
