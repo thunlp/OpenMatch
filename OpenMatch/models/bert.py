@@ -3,25 +3,24 @@ from typing import Tuple
 import torch
 import torch.nn as nn
 
-from transformers import AutoModel
+from transformers import AutoConfig, AutoModel
 
 class Bert(nn.Module):
     def __init__(
         self,
         pretrained: str,
-        enc_dim: int = 768,
         task: str = 'ranking'
     ) -> None:
         super(Bert, self).__init__()
         self._pretrained = pretrained
-        self._enc_dim = enc_dim
         self._task = task
 
-        self._model = AutoModel.from_pretrained(self._pretrained)
+        self._config = AutoConfig.from_pretrained(self._pretrained)
+        self._model = AutoModel.from_pretrained(self._pretrained, config=self._config)
         if self._task == 'ranking':
-            self._dense = nn.Linear(self._enc_dim, 1)
+            self._dense = nn.Linear(self._config.hidden_size, 1)
         elif self._task == 'classification':
-            self._dense = nn.Linear(self._enc_dim, 2)
+            self._dense = nn.Linear(self._config.hidden_size, 2)
         else:
             raise ValueError('Task must be `ranking` or `classification`.')
 

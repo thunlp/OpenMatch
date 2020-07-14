@@ -69,7 +69,7 @@ def main():
             max_input=args.max_input,
             task=args.task
         )
-    elif args.model ==  'roberta':
+    elif args.model == 'roberta':
         tokenizer = AutoTokenizer.from_pretrained(args.vocab)
         print('reading dev data...')
         dev_set = om.data.datasets.RobertaDataset(
@@ -123,10 +123,9 @@ def main():
         num_workers=8
     )
 
-    if args.model == 'bert' or 'roberta':
+    if args.model == 'bert' or args.model == 'roberta':
         model = om.models.Bert(
             pretrained=args.pretrain,
-            enc_dim=768,
             task=args.task
         )
     elif args.model == 'edrm':
