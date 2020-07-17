@@ -38,20 +38,7 @@ python inference.py \
 ```
 
 ## train
-Get training data.
-```
-wget http://boston.lti.cs.cmu.edu/appendices/CORD19-Zhuyun-Dai/seanmed.train.320K.tsv -P ./data
-```
-
-Preprocess the *tsv* file to jsonl: *{"query":, "doc":, "label":}* and produce *dev* file.
-```
-python ./data/preprocess.py \
-  -input_trec run.covid-r1.fusion.query-udel.bm25.txt \
-  -input_qrels qrels-cord19-round1.txt \
-  -input_queries questions_cord19-rnd1.txt \
-  -input_docs cord19_0501_titabs.jsonl \
-  -output ./data/dev_trec-covid-round1.jsonl
-```
+Get training data from [google drive](https://drive.google.com/file/d/1BT5gCOb1Kxkfh0BWqgUSgkxp2JPpRIWm/view?usp=sharing).
 
 Train.
 ```
@@ -59,7 +46,7 @@ CUDA_VISIBLE_DEVICES=0 \
 python train.py \
         -task classification \
         -model bert \
-        -train ./data/seanmed.train.320K.jsonl \
+        -train ./data/seanmed.train.320K-pairs.jsonl \
         -max_input 1280000 \
         -save ./checkpoints/scibert.bin \
         -dev ./data/dev_trec-covid-round1.jsonl \
@@ -73,7 +60,8 @@ python train.py \
         -epoch 5 \
         -batch_size 16 \
         -lr 2e-5 \
-        -eval_every 1000
+        -n_warmup_steps 4000 \
+        -eval_every 200
 ```
 
 For ReInfoSelect training, add
