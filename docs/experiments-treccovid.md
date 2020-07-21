@@ -1,11 +1,8 @@
 # Cord19
 
 ## Inference
-Get checkpoints.
-```
-wget http://boston.lti.cs.cmu.edu/appendices/CORD19-Zhuyun-Dai/covidscibert_msmarco9600steps.zip -P ./checkpoints
-unzip ./checkpoints/covidscibert_msmarco9600steps.zip -d ./checkpoints
-```
+Get checkpoint.
+* [checkpoint](https://drive.google.com/file/d/1pgDHljhA1GlGwONgcxFzV75KUvOhypfz/view?usp=sharing)
 
 Get data from Google Drive.
 * [round1](https://drive.google.com/open?id=17CEoLecus232pCDwCECaJD4vNfh4OQao)
@@ -30,7 +27,7 @@ python inference.py \
         -test ./data/test_trec-covid-round2.jsonl \
         -vocab allenai/scibert_scivocab_uncased \
         -pretrain allenai/scibert_scivocab_uncased \
-        -checkpoint ./checkpoints/checkpoint-9600/pytorch_model.bin \
+        -checkpoint ./checkpoints/scibert.bin \
         -res ./results/scibert.trec \
         -max_query_len 32 \
         -max_doc_len 256 \
