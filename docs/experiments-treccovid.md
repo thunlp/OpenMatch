@@ -34,6 +34,14 @@ python inference.py \
         -batch_size 32
 ```
 
+The docs which have already been labeled in earlier rounds should be filtered in current round.
+```
+python ./data/filter.py
+  -input_qrels qrels-cord19-round1.txt \
+  -input_trec ./results/scibert.trec \
+  -output ./results/scibert_filtered.trec
+```
+
 ## train
 Get training data from [google drive](https://drive.google.com/file/d/1BT5gCOb1Kxkfh0BWqgUSgkxp2JPpRIWm/view?usp=sharing).
 
