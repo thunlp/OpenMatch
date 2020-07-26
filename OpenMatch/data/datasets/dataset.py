@@ -47,7 +47,7 @@ class Dataset(Dataset):
                 for line in f:
                     line = json.loads(line)
                     self._docs[line['doc_id']] = line['doc']
-            if self._mode != 'test':
+            if self._mode == 'dev':
                 qrels = {}
                 with open(self._dataset['qrels'], 'r') as f:
                     for line in f:
@@ -61,7 +61,7 @@ class Dataset(Dataset):
                     if i >= self._max_input:
                         break
                     line = line.strip().split()
-                    if self._mode != 'test':
+                    if self._mode == 'dev':
                         if line[0] not in qrels or line[2] not in qrels[line[0]]:
                             label = 0
                         else:
@@ -70,7 +70,7 @@ class Dataset(Dataset):
                         if self._task == 'ranking':
                             self._examples.append({'query_id': line[0], 'doc_pos_id': line[1], 'doc_neg_id': line[2]})
                         elif self._task == 'classification':
-                            self._examples.append({'query_id': line[0], 'paper_id': line[2], 'label': label if label < 2 else 1})
+                            self._examples.append({'query_id': line[0], 'paper_id': line[1], 'label': int(line[2])})
                         else:
                             raise ValueError('Task must be `ranking` or `classification`.')
                     elif self._mode == 'dev':
