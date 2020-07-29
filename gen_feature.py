@@ -50,6 +50,7 @@ def main():
     parser.add_argument('-pretrain', type=str, default='allenai/scibert_scivocab_uncased')
     parser.add_argument('-checkpoint', type=str, default='./checkpoints/bert.bin')
     parser.add_argument('-res', type=str, default='./features/bert_features')
+    parser.add_argument('-mode', type=str, default='cls')
     parser.add_argument('-n_kernels', type=int, default=21)
     parser.add_argument('-max_query_len', type=int, default=32)
     parser.add_argument('-max_doc_len', type=int, default=256)
@@ -126,6 +127,7 @@ def main():
     if args.model == 'bert' or args.model == 'roberta':
         model = om.models.Bert(
             pretrained=args.pretrain,
+            mode=args.mode,
             task=args.task
         )
     elif args.model == 'edrm':

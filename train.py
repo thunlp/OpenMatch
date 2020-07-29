@@ -267,6 +267,7 @@ def main():
     parser.add_argument('-pretrain', type=str, default='allenai/scibert_scivocab_uncased')
     parser.add_argument('-res', type=str, default='./results/bert.trec')
     parser.add_argument('-metric', type=str, default='ndcg_cut_10')
+    parser.add_argument('-mode', type=str, default='cls')
     parser.add_argument('-n_kernels', type=int, default=21)
     parser.add_argument('-max_query_len', type=int, default=20)
     parser.add_argument('-max_doc_len', type=int, default=150)
@@ -396,11 +397,13 @@ def main():
     if args.model == 'bert' or args.model == 'roberta':
         model = om.models.Bert(
             pretrained=args.pretrain,
+            mode=args.mode,
             task=args.task
         )
         if args.reinfoselect:
             policy = om.models.Bert(
                 pretrained=args.pretrain,
+                mode=args.mode,
                 task='classification'
             )
     elif args.model == 'edrm':
