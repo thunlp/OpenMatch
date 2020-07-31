@@ -14,7 +14,7 @@ python data/filter.py \
   -input_qrels qrels-cord19-round1.txt \
   -input_trec anserini.covid-r2.fusion2.txt \
   -output_topk 50 \
-  -output_trec anserini.covid-r2.fusion2-filtered.txt \
+  -output_trec anserini.covid-r2.fusion2-filtered.txt
 ```
 
 Preprocess round2 data.
@@ -26,7 +26,7 @@ python ./data/preprocess.py \
   -output ./data/test_trec-covid-round2.jsonl
 ```
 
-Reproduce scibert, NDCG@10: 0.5808.
+Reproduce scibert, NDCG@10: 0.5762.
 ```
 CUDA_VISIBLE_DEVICES=0 \
 python inference.py \
@@ -44,7 +44,7 @@ python inference.py \
         -batch_size 32
 ```
 
-Reproduce reinfoselect scibert, NDCG@10: 0.6324.
+Reproduce reinfoselect scibert, NDCG@10: 0.6428.
 ```
 CUDA_VISIBLE_DEVICES=0 \
 python inference.py \
