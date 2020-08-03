@@ -1,4 +1,4 @@
-# Cord19
+# TREC COVID
 
 ## Inference
 Get checkpoint.

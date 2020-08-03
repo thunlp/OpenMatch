@@ -35,7 +35,7 @@ def dev(args, model, metric, dev_loader, device):
                     rst_dict[q_id] = [(b_s, d_id, l)]
     return rst_dict
 
-def train_reinfoselect(args, model, policy, loss_fn, m_optim, m_scheduler, p_optim, p_scheduler, metric, train_loader, dev_loader, device):
+def train_reinfoselect(args, model, policy, loss_fn, m_optim, m_scheduler, p_optim, metric, train_loader, dev_loader, device):
     best_mes = 0.0
     with torch.no_grad():
         rst_dict = dev(args, model, metric, dev_loader, device)
@@ -119,7 +119,6 @@ def train_reinfoselect(args, model, policy, loss_fn, m_optim, m_scheduler, p_opt
             action = dist.sample()
             if action.sum().item() < 1:
                 m_scheduler.step()
-                p_scheduler.step()
                 continue
             mask = action.ge(0.5)
             log_prob_p = torch.masked_select(dist.log_prob(action), mask)
@@ -165,7 +164,6 @@ def train_reinfoselect(args, model, policy, loss_fn, m_optim, m_scheduler, p_opt
                 policy_loss = (log_prob_n * reward).sum().unsqueeze(-1)
             policy_loss.backward()
             p_optim.step()
-            p_scheduler.step()
             p_optim.zero_grad()
 
 def train(args, model, loss_fn, m_optim, m_scheduler, metric, train_loader, dev_loader, device):
@@ -265,6 +263,7 @@ def main():
     parser.add_argument('-vocab', type=str, default='allenai/scibert_scivocab_uncased')
     parser.add_argument('-ent_vocab', type=str, default='')
     parser.add_argument('-pretrain', type=str, default='allenai/scibert_scivocab_uncased')
+    parser.add_argument('-checkpoint', type=str, default=None)
     parser.add_argument('-res', type=str, default='./results/bert.trec')
     parser.add_argument('-metric', type=str, default='ndcg_cut_10')
     parser.add_argument('-mode', type=str, default='cls')
@@ -465,6 +464,21 @@ def main():
             task='classification'
         )
 
+    if args.checkpoint is not None:
+        state_dict = torch.load(args.checkpoint)
+        if args.model == 'bert':
+            st = {}
+            for k in state_dict:
+                if k.startswith('bert'):
+                    st['_model'+k[len('bert'):]] = state_dict[k]
+                elif k.startswith('classifier'):
+                    st['_dense'+k[len('classifier'):]] = state_dict[k]
+                else:
+                    st[k] = state_dict[k]
+            model.load_state_dict(st)
+        else:
+            model.load_state_dict(state_dict)
+
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     if args.reinfoselect:
@@ -485,7 +499,6 @@ def main():
     m_scheduler = get_linear_schedule_with_warmup(m_optim, num_warmup_steps=args.n_warmup_steps, num_training_steps=len(train_set)*args.epoch//args.batch_size)
     if args.reinfoselect:
         p_optim = torch.optim.Adam(filter(lambda p: p.requires_grad, policy.parameters()), lr=args.lr)
-        p_scheduler = get_linear_schedule_with_warmup(p_optim, num_warmup_steps=args.n_warmup_steps, num_training_steps=len(train_set)*args.epoch//args.batch_size)
     metric = om.metrics.Metric()
 
     model.to(device)
@@ -497,7 +510,7 @@ def main():
         loss_fn = nn.DataParallel(loss_fn)
 
     if args.reinfoselect:
-        train_reinfoselect(args, model, policy, loss_fn, m_optim, m_scheduler, p_optim, p_scheduler, metric, train_loader, dev_loader, device)
+        train_reinfoselect(args, model, policy, loss_fn, m_optim, m_scheduler, p_optim, metric, train_loader, dev_loader, device)
     else:
         train(args, model, loss_fn, m_optim, m_scheduler, metric, train_loader, dev_loader, device)
 

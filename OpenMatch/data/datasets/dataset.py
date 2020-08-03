@@ -40,12 +40,20 @@ class Dataset(Dataset):
             self._queries = {}
             with open(self._dataset['queries'], 'r') as f:
                 for line in f:
-                    line = json.loads(line)
+                    if self._dataset['queries'].split('.')[-1] == 'json' or self._dataset['queries'].split('.')[-1] == 'jsonl':
+                        line = json.loads(line)
+                    else:
+                        query_id, query = line.strip('\n').split('\t')
+                        line = {'query_id': query_id, 'query': query}
                     self._queries[line['query_id']] = line['query']
             self._docs = {}
             with open(self._dataset['docs'], 'r') as f:
                 for line in f:
-                    line = json.loads(line)
+                    if self._dataset['docs'].split('.')[-1] == 'json' or self._dataset['docs'].split('.')[-1] == 'jsonl':
+                        line = json.loads(line)
+                    else:
+                        doc_id, doc = line.strip('\n').split('\t')
+                        line = {'doc_id': doc_id, 'doc': doc}
                     self._docs[line['doc_id']] = line['doc']
             if self._mode == 'dev':
                 qrels = {}
@@ -70,13 +78,13 @@ class Dataset(Dataset):
                         if self._task == 'ranking':
                             self._examples.append({'query_id': line[0], 'doc_pos_id': line[1], 'doc_neg_id': line[2]})
                         elif self._task == 'classification':
-                            self._examples.append({'query_id': line[0], 'paper_id': line[1], 'label': int(line[2])})
+                            self._examples.append({'query_id': line[0], 'doc_id': line[1], 'label': int(line[2])})
                         else:
                             raise ValueError('Task must be `ranking` or `classification`.')
                     elif self._mode == 'dev':
-                        self._examples.append({'label': label, 'query_id': line[0], 'paper_id': line[2], 'retrieval_score': float(line[4])})
+                        self._examples.append({'label': label, 'query_id': line[0], 'doc_id': line[2], 'retrieval_score': float(line[4])})
                     elif self._mode == 'test':
-                        self._examples.append({'query_id': line[0], 'paper_id': line[2], 'retrieval_score': float(line[4])})
+                        self._examples.append({'query_id': line[0], 'doc_id': line[2], 'retrieval_score': float(line[4])})
                     else:
                         raise ValueError('Mode must be `train`, `dev` or `test`.')
         else:
@@ -138,7 +146,7 @@ class Dataset(Dataset):
                 example['doc_pos'] = self._docs[example['doc_pos_id']]
                 example['doc_neg'] = self._docs[example['doc_neg_id']]
             else:
-                example['doc'] = self._docs[example['paper_id']]
+                example['doc'] = self._docs[example['doc_id']]
         if self._mode == 'train':
             if self._task == 'ranking':
                 query_idx, query_mask = self._tokenizer.process(example['query'], self._query_max_len)
@@ -158,13 +166,13 @@ class Dataset(Dataset):
         elif self._mode == 'dev':
             query_idx, query_mask = self._tokenizer.process(example['query'], self._query_max_len)
             doc_idx, doc_mask = self._tokenizer.process(example['doc'], self._doc_max_len)
-            return {'query_id': example['query_id'], 'doc_id': example['paper_id'], 'label': example['label'], 'retrieval_score': example['retrieval_score'],
+            return {'query_id': example['query_id'], 'doc_id': example['doc_id'], 'label': example['label'], 'retrieval_score': example['retrieval_score'],
                     'query_idx': query_idx, 'query_mask': query_mask,
                     'doc_idx': doc_idx, 'doc_mask': doc_mask}
         elif self._mode == 'test':
             query_idx, query_mask = self._tokenizer.process(example['query'], self._query_max_len)
             doc_idx, doc_mask = self._tokenizer.process(example['doc'], self._doc_max_len)
-            return {'query_id': example['query_id'], 'doc_id': example['paper_id'], 'retrieval_score': example['retrieval_score'],
+            return {'query_id': example['query_id'], 'doc_id': example['doc_id'], 'retrieval_score': example['retrieval_score'],
                     'query_idx': query_idx, 'query_mask': query_mask,
                     'doc_idx': doc_idx, 'doc_mask': doc_mask}
         else:

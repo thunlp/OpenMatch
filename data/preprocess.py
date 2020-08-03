@@ -48,9 +48,9 @@ def main():
                     label = qpls[line[0]][line[2]]
                 else:
                     label = 0
-                f.write(json.dumps({'query': qs[line[0]], 'doc': ps[line[2]], 'label': label, 'query_id': line[0], 'paper_id': line[2], 'retrieval_score': float(line[4])}) + '\n')
+                f.write(json.dumps({'query': qs[line[0]], 'doc': ps[line[2]], 'label': label, 'query_id': line[0], 'doc_id': line[2], 'retrieval_score': float(line[4])}) + '\n')
             else:
-                f.write(json.dumps({'query': qs[line[0]], 'doc': ps[line[2]], 'query_id': line[0], 'paper_id': line[2], 'retrieval_score': float(line[4])}) + '\n')
+                f.write(json.dumps({'query': qs[line[0]], 'doc': ps[line[2]], 'query_id': line[0], 'doc_id': line[2], 'retrieval_score': float(line[4])}) + '\n')
     f.close()
 
 if __name__ == "__main__":

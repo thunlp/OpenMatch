@@ -69,8 +69,8 @@ For bert, tk, cknrm or knrm:
 |file|format|
 |:---|:-----|
 |train|{"query": str, "doc\_pos": str, "doc\_neg": str}|
-|dev  |{"query": str, "doc": str, "label": int, "query\_id": str, "paper\_id": str, "retrieval\_score": float}|
-|test |{"query": str, "doc": str, "query\_id": str, "paper\_id": str, "retrieval\_score": float}|
+|dev  |{"query": str, "doc": str, "label": int, "query\_id": str, "doc\_id": str, "retrieval\_score": float}|
+|test |{"query": str, "doc": str, "query\_id": str, "doc\_id": str, "retrieval\_score": float}|
 
 For edrm:
 
