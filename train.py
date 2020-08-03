@@ -122,6 +122,39 @@ def train_reinfoselect(args, model, policy, loss_fn, m_optim, m_scheduler, p_opt
             action = dist.sample()
             if action.sum().item() < 1:
                 m_scheduler.step()
+                if (step+1) % args.n_acc_steps == 0 and len(log_prob_ps) > 0:
+                    with torch.no_grad():
+                        rst_dict = dev(args, model, metric, dev_loader, device)
+                        om.utils.save_trec(args.res, rst_dict)
+                        if args.metric.split('_')[0] == 'mrr':
+                            mes = metric.get_mrr(args.qrels, args.res, args.metric)
+                        else:
+                            mes = metric.get_metric(args.qrels, args.res, args.metric)
+                    if mes > best_mes:
+                        best_mes = mes
+                        print('save_model...')
+                        if torch.cuda.device_count() > 1:
+                            torch.save(model.module.state_dict(), args.save)
+                        else:
+                            torch.save(model.state_dict(), args.save)
+                    print(step+1, avg_loss/len(log_prob_ps), mes, best_mes)
+                    avg_loss = 0.0
+
+                    reward = mes - best_mes # last_mes
+                    # last_mes = mes
+                    if reward > 0:
+                        policy_loss = [(-log_prob_p * reward).sum().unsqueeze(-1) for log_prob_p in log_prob_ps]
+                    else:
+                        policy_loss = [(log_prob_n * reward).sum().unsqueeze(-1) for log_prob_n in log_prob_ns]
+                        state_dict = torch.load(args.save)
+                        model.load_state_dict(state_dict)
+                    policy_loss = torch.cat(policy_loss).sum()
+                    policy_loss.backward()
+                    p_optim.step()
+                    p_optim.zero_grad()
+
+                    log_prob_ps = []
+                    log_prob_ns = []
                 continue
             mask = action.ge(0.5)
             log_prob_p = torch.masked_select(dist.log_prob(action), mask)
