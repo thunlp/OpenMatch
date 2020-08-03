@@ -136,7 +136,7 @@ unzip ./data/glove.6B.zip -d ./data
   |BERT|0.2701|0.4168|0.1183|
   |ELECTRA|0.2861|0.4668|0.1078|
 
-\* [MS MARCO Passage Rankning](./docs/experiments-msmarco.md)
+\* [MS MARCO Passage Ranking](./docs/experiments-msmarco.md)
 
 
 ## Contribution

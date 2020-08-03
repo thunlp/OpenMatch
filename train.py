@@ -2,6 +2,7 @@ import argparse
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.distributions import Categorical
 
 from transformers import AutoTokenizer, get_linear_schedule_with_warmup
@@ -52,9 +53,11 @@ def train_reinfoselect(args, model, policy, loss_fn, m_optim, m_scheduler, p_opt
         else:
             torch.save(model.state_dict(), args.save)
     print('initial result: ', mes)
-    last_mes = mes
+    # last_mes = mes
     for epoch in range(args.epoch):
         avg_loss = 0.0
+        log_prob_ps = []
+        log_prob_ns = []
         for step, train_batch in enumerate(train_loader):
             if args.model == 'bert':
                 if args.task == 'ranking':
@@ -115,7 +118,7 @@ def train_reinfoselect(args, model, policy, loss_fn, m_optim, m_scheduler, p_opt
                                            train_batch['doc_idx'].to(device), train_batch['doc_mask'].to(device))
                 else:
                     raise ValueError('Task must be `ranking` or `classification`.')
-            dist = Categorical(batch_probs.softmax(dim=-1))
+            dist = Categorical(F.gumbel_softmax(batch_probs, tau=5))
             action = dist.sample()
             if action.sum().item() < 1:
                 m_scheduler.step()
@@ -123,6 +126,8 @@ def train_reinfoselect(args, model, policy, loss_fn, m_optim, m_scheduler, p_opt
             mask = action.ge(0.5)
             log_prob_p = torch.masked_select(dist.log_prob(action), mask)
             log_prob_n = torch.masked_select(dist.log_prob(1-action), mask)
+            log_prob_ps.append(log_prob_p)
+            log_prob_ns.append(log_prob_n)
 
             if args.task == 'ranking':
                 batch_loss = loss_fn(batch_score_pos.tanh(), batch_score_neg.tanh(), torch.ones(batch_score_pos.size()).to(device))
@@ -139,32 +144,39 @@ def train_reinfoselect(args, model, policy, loss_fn, m_optim, m_scheduler, p_opt
             m_scheduler.step()
             m_optim.zero_grad()
 
-            with torch.no_grad():
-                rst_dict = dev(args, model, metric, dev_loader, device)
-                om.utils.save_trec(args.res, rst_dict)
-                if args.metric.split('_')[0] == 'mrr':
-                    mes = metric.get_mrr(args.qrels, args.res, args.metric)
-                else:
-                    mes = metric.get_metric(args.qrels, args.res, args.metric)
-            if mes > best_mes:
-                best_mes = mes
-                print('save_model...')
-                if torch.cuda.device_count() > 1:
-                    torch.save(model.module.state_dict(), args.save)
-                else:
-                    torch.save(model.state_dict(), args.save)
-            print(step+1, avg_loss, mes, best_mes)
-            avg_loss = 0.0
+            if (step+1) % args.n_acc_steps == 0 and len(log_prob_ps) > 0:
+                with torch.no_grad():
+                    rst_dict = dev(args, model, metric, dev_loader, device)
+                    om.utils.save_trec(args.res, rst_dict)
+                    if args.metric.split('_')[0] == 'mrr':
+                        mes = metric.get_mrr(args.qrels, args.res, args.metric)
+                    else:
+                        mes = metric.get_metric(args.qrels, args.res, args.metric)
+                if mes > best_mes:
+                    best_mes = mes
+                    print('save_model...')
+                    if torch.cuda.device_count() > 1:
+                        torch.save(model.module.state_dict(), args.save)
+                    else:
+                        torch.save(model.state_dict(), args.save)
+                print(step+1, avg_loss/len(log_prob_ps), mes, best_mes)
+                avg_loss = 0.0
 
-            reward = mes - last_mes
-            last_mes = mes
-            if reward > 0:
-                policy_loss = (-log_prob_p * reward).sum().unsqueeze(-1)
-            else:
-                policy_loss = (log_prob_n * reward).sum().unsqueeze(-1)
-            policy_loss.backward()
-            p_optim.step()
-            p_optim.zero_grad()
+                reward = mes - best_mes # last_mes
+                # last_mes = mes
+                if reward > 0:
+                    policy_loss = [(-log_prob_p * reward).sum().unsqueeze(-1) for log_prob_p in log_prob_ps]
+                else:
+                    policy_loss = [(log_prob_n * reward).sum().unsqueeze(-1) for log_prob_n in log_prob_ns]
+                    state_dict = torch.load(args.save)
+                    model.load_state_dict(state_dict)
+                policy_loss = torch.cat(policy_loss).sum()
+                policy_loss.backward()
+                p_optim.step()
+                p_optim.zero_grad()
+
+                log_prob_ps = []
+                log_prob_ns = []
 
 def train(args, model, loss_fn, m_optim, m_scheduler, metric, train_loader, dev_loader, device):
     best_mes = 0.0
@@ -273,6 +285,7 @@ def main():
     parser.add_argument('-epoch', type=int, default=1)
     parser.add_argument('-batch_size', type=int, default=8)
     parser.add_argument('-lr', type=float, default=2e-5)
+    parser.add_argument('-n_acc_steps', type=int, default=10)
     parser.add_argument('-n_warmup_steps', type=int, default=1000)
     parser.add_argument('-eval_every', type=int, default=1000)
     args = parser.parse_args()
