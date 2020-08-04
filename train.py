@@ -119,6 +119,7 @@ def train_reinfoselect(args, model, policy, loss_fn, m_optim, m_scheduler, p_opt
 
                     state_dict = torch.load(args.save)
                     model.load_state_dict(state_dict)
+                    last_mes = best_mes
 
                     log_prob_ps = []
                     log_prob_ns = []
@@ -245,6 +246,7 @@ def train_reinfoselect(args, model, policy, loss_fn, m_optim, m_scheduler, p_opt
 
                 state_dict = torch.load(args.save)
                 model.load_state_dict(state_dict)
+                last_mes = best_mes
 
                 log_prob_ps = []
                 log_prob_ns = []
