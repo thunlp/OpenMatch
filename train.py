@@ -3,7 +3,6 @@ import argparse
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.distributions import Categorical
 
 from transformers import AutoTokenizer, get_linear_schedule_with_warmup
 import OpenMatch as om
@@ -45,7 +44,7 @@ def train_reinfoselect(args, model, policy, loss_fn, m_optim, m_scheduler, p_opt
             mes = metric.get_mrr(args.qrels, args.res, args.metric)
         else:
             mes = metric.get_metric(args.qrels, args.res, args.metric)
-    if mes > best_mes:
+    if mes >= best_mes:
         best_mes = mes
         print('save_model...')
         if torch.cuda.device_count() > 1:
@@ -53,112 +52,138 @@ def train_reinfoselect(args, model, policy, loss_fn, m_optim, m_scheduler, p_opt
         else:
             torch.save(model.state_dict(), args.save)
     print('initial result: ', mes)
-    # last_mes = mes
+    last_mes = mes
     for epoch in range(args.epoch):
         avg_loss = 0.0
         log_prob_ps = []
         log_prob_ns = []
+        log_probs = []
+        rewards = []
         for step, train_batch in enumerate(train_loader):
             if args.model == 'bert':
                 if args.task == 'ranking':
                     batch_probs, _ = policy(train_batch['input_ids_pos'].to(device), train_batch['input_mask_pos'].to(device), train_batch['segment_ids_pos'].to(device))
-                    batch_score_pos, _ = model(train_batch['input_ids_pos'].to(device), train_batch['input_mask_pos'].to(device), train_batch['segment_ids_pos'].to(device))
-                    batch_score_neg, _ = model(train_batch['input_ids_neg'].to(device), train_batch['input_mask_neg'].to(device), train_batch['segment_ids_neg'].to(device))
                 elif args.task == 'classification':
                     batch_probs, _ = policy(train_batch['input_ids'].to(device), train_batch['input_mask'].to(device), train_batch['segment_ids'].to(device))
-                    batch_score, _ = model(train_batch['input_ids'].to(device), train_batch['input_mask'].to(device), train_batch['segment_ids'].to(device))
                 else:
                     raise ValueError('Task must be `ranking` or `classification`.')
             elif args.model == 'roberta':
                 if args.task == 'ranking':
                     batch_probs, _ = policy(train_batch['input_ids_pos'].to(device), train_batch['input_mask_pos'].to(device))
-                    batch_score_pos, _ = model(train_batch['input_ids_pos'].to(device), train_batch['input_mask_pos'].to(device))
-                    batch_score_neg, _ = model(train_batch['input_ids_neg'].to(device), train_batch['input_mask_neg'].to(device))
                 elif args.task == 'classification':
                     batch_probs, _ = policy(train_batch['input_ids'].to(device), train_batch['input_mask'].to(device))
-                    batch_score, _ = model(train_batch['input_ids'].to(device), train_batch['input_mask'].to(device))
                 else:
                     raise ValueError('Task must be `ranking` or `classification`.')
             elif args.model == 'edrm':
                 if args.task == 'ranking':
                     batch_probs, _ = policy(train_batch['query_wrd_idx'].to(device), train_batch['query_wrd_mask'].to(device),
                                             train_batch['doc_pos_wrd_idx'].to(device), train_batch['doc_pos_wrd_mask'].to(device))
-                    batch_score_pos, _ = model(train_batch['query_wrd_idx'].to(device), train_batch['query_wrd_mask'].to(device),
-                                               train_batch['doc_pos_wrd_idx'].to(device), train_batch['doc_pos_wrd_mask'].to(device),
-                                               train_batch['query_ent_idx'].to(device), train_batch['query_ent_mask'].to(device),
-                                               train_batch['doc_pos_ent_idx'].to(device), train_batch['doc_pos_ent_mask'].to(device),
-                                               train_batch['query_des_idx'].to(device), train_batch['doc_pos_des_idx'].to(device))
-                    batch_score_neg, _ = model(train_batch['query_wrd_idx'].to(device), train_batch['query_wrd_mask'].to(device),
-                                               train_batch['doc_neg_wrd_idx'].to(device), train_batch['doc_neg_wrd_mask'].to(device),
-                                               train_batch['query_ent_idx'].to(device), train_batch['query_ent_mask'].to(device),
-                                               train_batch['doc_neg_ent_idx'].to(device), train_batch['doc_neg_ent_mask'].to(device),
-                                               train_batch['query_des_idx'].to(device), train_batch['doc_neg_des_idx'].to(device))
                 elif args.task == 'classification':
                     batch_probs, _ = policy(train_batch['query_wrd_idx'].to(device), train_batch['query_wrd_mask'].to(device),
                                             train_batch['doc_wrd_idx'].to(device), train_batch['doc_wrd_mask'].to(device))
-                    batch_score, _ = model(train_batch['query_wrd_idx'].to(device), train_batch['query_wrd_mask'].to(device),
-                                           train_batch['doc_wrd_idx'].to(device), train_batch['doc_wrd_mask'].to(device),
-                                           train_batch['query_ent_idx'].to(device), train_batch['query_ent_mask'].to(device),
-                                           train_batch['doc_ent_idx'].to(device), train_batch['doc_ent_mask'].to(device),
-                                           train_batch['query_des_idx'].to(device), train_batch['doc_des_idx'].to(device))
                 else:
                     raise ValueError('Task must be `ranking` or `classification`.')
             else:
                 if args.task == 'ranking':
                     batch_probs, _ = policy(train_batch['query_idx'].to(device), train_batch['query_mask'].to(device),
                                                train_batch['doc_pos_idx'].to(device), train_batch['doc_pos_mask'].to(device))
-                    batch_score_pos, _ = model(train_batch['query_idx'].to(device), train_batch['query_mask'].to(device),
-                                               train_batch['doc_pos_idx'].to(device), train_batch['doc_pos_mask'].to(device))
-                    batch_score_neg, _ = model(train_batch['query_idx'].to(device), train_batch['query_mask'].to(device),
-                                               train_batch['doc_neg_idx'].to(device), train_batch['doc_neg_mask'].to(device))
                 elif args.task == 'classification':
                     batch_probs, _ = policy(train_batch['query_idx'].to(device), train_batch['query_mask'].to(device),
                                            train_batch['doc_idx'].to(device), train_batch['doc_mask'].to(device))
-                    batch_score, _ = model(train_batch['query_idx'].to(device), train_batch['query_mask'].to(device),
-                                           train_batch['doc_idx'].to(device), train_batch['doc_mask'].to(device))
                 else:
                     raise ValueError('Task must be `ranking` or `classification`.')
-            dist = Categorical(F.gumbel_softmax(batch_probs, tau=args.tau))
-            action = dist.sample()
+            batch_probs = F.gumbel_softmax(batch_probs, tau=args.tau)
+            action = batch_probs.argmax(dim=-1)
             if action.sum().item() < 1:
                 m_scheduler.step()
-                if (step+1) % args.n_acc_steps == 0 and len(log_prob_ps) > 0:
-                    with torch.no_grad():
-                        rst_dict = dev(args, model, metric, dev_loader, device)
-                        om.utils.save_trec(args.res, rst_dict)
-                        if args.metric.split('_')[0] == 'mrr':
-                            mes = metric.get_mrr(args.qrels, args.res, args.metric)
+                if (step+1) % args.n_acc_steps == 0 and len(rewards) > 0:
+                    R = 0.0
+                    policy_loss = []
+                    returns = []
+                    for ri in reversed(range(len(rewards))):
+                        R = rewards[ri] + args.gamma * R
+                        if R >= 0:
+                            for i in range(len(log_prob_ps)):
+                                log_probs.insert(0, log_prob_ps[i])
+                                returns.insert(0, R)
                         else:
-                            mes = metric.get_metric(args.qrels, args.res, args.metric)
-                    if mes > best_mes:
-                        best_mes = mes
-                        print('save_model...')
-                        if torch.cuda.device_count() > 1:
-                            torch.save(model.module.state_dict(), args.save)
-                        else:
-                            torch.save(model.state_dict(), args.save)
-                    print(step+1, avg_loss/len(log_prob_ps), mes, best_mes)
-                    avg_loss = 0.0
-
-                    reward = mes - best_mes # last_mes
-                    # last_mes = mes
-                    if reward > 0:
-                        policy_loss = [(-log_prob_p * reward).sum().unsqueeze(-1) for log_prob_p in log_prob_ps]
-                    else:
-                        policy_loss = [(log_prob_n * reward).sum().unsqueeze(-1) for log_prob_n in log_prob_ns]
-                        state_dict = torch.load(args.save)
-                        model.load_state_dict(state_dict)
+                            for i in range(len(log_prob_ns)):
+                                log_probs.insert(0, log_prob_ns[i])
+                                returns.insert(0, -R)
+                    for lp, r in zip(log_probs, returns):
+                        policy_loss.append((-lp * r).sum().unsqueeze(-1))
                     policy_loss = torch.cat(policy_loss).sum()
                     policy_loss.backward()
                     p_optim.step()
                     p_optim.zero_grad()
 
+                    state_dict = torch.load(args.save)
+                    model.load_state_dict(state_dict)
+
                     log_prob_ps = []
                     log_prob_ns = []
+                    log_probs = []
+                    rewards = []
                 continue
+
+            filt = action.nonzero().squeeze(-1).cpu()
+            if args.model == 'bert':
+                if args.task == 'ranking':
+                    batch_score_pos, _ = model(train_batch['input_ids_pos'].index_select(0, filt).to(device),
+                                               train_batch['input_mask_pos'].index_select(0, filt).to(device),
+                                               train_batch['segment_ids_pos'].index_select(0, filt).to(device))
+                    batch_score_neg, _ = model(train_batch['input_ids_neg'].index_select(0, filt).to(device),
+                                               train_batch['input_mask_neg'].index_select(0, filt).to(device),
+                                               train_batch['segment_ids_neg'].index_select(0, filt).to(device))
+                elif args.task == 'classification':
+                    batch_score, _ = model(train_batch['input_ids'].index_select(0, filt).to(device),
+                                           train_batch['input_mask'].index_select(0, filt).to(device),
+                                           train_batch['segment_ids'].index_select(0, filt).to(device))
+                else:
+                    raise ValueError('Task must be `ranking` or `classification`.')
+            elif args.model == 'roberta':
+                if args.task == 'ranking':
+                    batch_score_pos, _ = model(train_batch['input_ids_pos'].index_select(0, filt).to(device), train_batch['input_mask_pos'].index_select(0, filt).to(device))
+                    batch_score_neg, _ = model(train_batch['input_ids_neg'].index_select(0, filt).to(device), train_batch['input_mask_neg'].index_select(0, filt).to(device))
+                elif args.task == 'classification':
+                    batch_score, _ = model(train_batch['input_ids'].index_select(0, filt).to(device), train_batch['input_mask'].index_select(0, filt).to(device))
+                else:
+                    raise ValueError('Task must be `ranking` or `classification`.')
+            elif args.model == 'edrm':
+                if args.task == 'ranking':
+                    batch_score_pos, _ = model(train_batch['query_wrd_idx'].index_select(0, filt).to(device), train_batch['query_wrd_mask'].index_select(0, filt).to(device),
+                                               train_batch['doc_pos_wrd_idx'].index_select(0, filt).to(device), train_batch['doc_pos_wrd_mask'].index_select(0, filt).to(device),
+                                               train_batch['query_ent_idx'].index_select(0, filt).to(device), train_batch['query_ent_mask'].index_select(0, filt).to(device),
+                                               train_batch['doc_pos_ent_idx'].index_select(0, filt).to(device), train_batch['doc_pos_ent_mask'].index_select(0, filt).to(device),
+                                               train_batch['query_des_idx'].index_select(0, filt).to(device), train_batch['doc_pos_des_idx'].index_select(0, filt).to(device))
+                    batch_score_neg, _ = model(train_batch['query_wrd_idx'].index_select(0, filt).to(device), train_batch['query_wrd_mask'].index_select(0, filt).to(device),
+                                               train_batch['doc_neg_wrd_idx'].index_select(0, filt).to(device), train_batch['doc_neg_wrd_mask'].index_select(0, filt).to(device),
+                                               train_batch['query_ent_idx'].index_select(0, filt).to(device), train_batch['query_ent_mask'].index_select(0, filt).to(device),
+                                               train_batch['doc_neg_ent_idx'].index_select(0, filt).to(device), train_batch['doc_neg_ent_mask'].index_select(0, filt).to(device),
+                                               train_batch['query_des_idx'].index_select(0, filt).to(device), train_batch['doc_neg_des_idx'].index_select(0, filt).to(device))
+                elif args.task == 'classification':
+                    batch_score, _ = model(train_batch['query_wrd_idx'].index_select(0, filt).to(device), train_batch['query_wrd_mask'].index_select(0, filt).to(device),
+                                           train_batch['doc_wrd_idx'].index_select(0, filt).to(device), train_batch['doc_wrd_mask'].index_select(0, filt).to(device),
+                                           train_batch['query_ent_idx'].index_select(0, filt).to(device), train_batch['query_ent_mask'].index_select(0, filt).to(device),
+                                           train_batch['doc_ent_idx'].index_select(0, filt).to(device), train_batch['doc_ent_mask'].index_select(0, filt).to(device),
+                                           train_batch['query_des_idx'].index_select(0, filt).to(device), train_batch['doc_des_idx'].index_select(0, filt).to(device))
+                else:
+                    raise ValueError('Task must be `ranking` or `classification`.')
+            else:
+                if args.task == 'ranking':
+                    batch_score_pos, _ = model(train_batch['query_idx'].index_select(0, filt).to(device), train_batch['query_mask'].index_select(0, filt).to(device),
+                                               train_batch['doc_pos_idx'].index_select(0, filt).to(device), train_batch['doc_pos_mask'].index_select(0, filt).to(device))
+                    batch_score_neg, _ = model(train_batch['query_idx'].index_select(0, filt).to(device), train_batch['query_mask'].index_select(0, filt).to(device),
+                                               train_batch['doc_neg_idx'].index_select(0, filt).to(device), train_batch['doc_neg_mask'].index_select(0, filt).to(device))
+                elif args.task == 'classification':
+                    batch_score, _ = model(train_batch['query_idx'].index_select(0, filt).to(device), train_batch['query_mask'].index_select(0, filt).to(device),
+                                           train_batch['doc_idx'].index_select(0, filt).to(device), train_batch['doc_mask'].index_select(0, filt).to(device))
+                else:
+                    raise ValueError('Task must be `ranking` or `classification`.')
+
             mask = action.ge(0.5)
-            log_prob_p = torch.masked_select(dist.log_prob(action), mask)
-            log_prob_n = torch.masked_select(dist.log_prob(1-action), mask)
+            log_prob_p = torch.masked_select(batch_probs[:, 1].log(), mask)
+            log_prob_n = torch.masked_select(batch_probs[:, 0].log(), mask)
             log_prob_ps.append(log_prob_p)
             log_prob_ns.append(log_prob_n)
 
@@ -177,39 +202,54 @@ def train_reinfoselect(args, model, policy, loss_fn, m_optim, m_scheduler, p_opt
             m_scheduler.step()
             m_optim.zero_grad()
 
-            if (step+1) % args.n_acc_steps == 0 and len(log_prob_ps) > 0:
-                with torch.no_grad():
-                    rst_dict = dev(args, model, metric, dev_loader, device)
-                    om.utils.save_trec(args.res, rst_dict)
-                    if args.metric.split('_')[0] == 'mrr':
-                        mes = metric.get_mrr(args.qrels, args.res, args.metric)
-                    else:
-                        mes = metric.get_metric(args.qrels, args.res, args.metric)
-                if mes > best_mes:
-                    best_mes = mes
-                    print('save_model...')
-                    if torch.cuda.device_count() > 1:
-                        torch.save(model.module.state_dict(), args.save)
-                    else:
-                        torch.save(model.state_dict(), args.save)
-                print(step+1, avg_loss/len(log_prob_ps), mes, best_mes)
-                avg_loss = 0.0
-
-                reward = mes - best_mes # last_mes
-                # last_mes = mes
-                if reward > 0:
-                    policy_loss = [(-log_prob_p * reward).sum().unsqueeze(-1) for log_prob_p in log_prob_ps]
+            with torch.no_grad():
+                rst_dict = dev(args, model, metric, dev_loader, device)
+                om.utils.save_trec(args.res, rst_dict)
+                if args.metric.split('_')[0] == 'mrr':
+                    mes = metric.get_mrr(args.qrels, args.res, args.metric)
                 else:
-                    policy_loss = [(log_prob_n * reward).sum().unsqueeze(-1) for log_prob_n in log_prob_ns]
-                    state_dict = torch.load(args.save)
-                    model.load_state_dict(state_dict)
+                    mes = metric.get_metric(args.qrels, args.res, args.metric)
+            if mes >= best_mes:
+                best_mes = mes
+                print('save_model...')
+                if torch.cuda.device_count() > 1:
+                    torch.save(model.module.state_dict(), args.save)
+                else:
+                    torch.save(model.state_dict(), args.save)
+            print(step+1, avg_loss/1, mes, best_mes)
+            avg_loss = 0.0
+
+            reward = mes - last_mes
+            last_mes = mes
+            rewards.append(reward)
+            if (step+1) % args.n_acc_steps == 0:
+                R = 0.0
+                policy_loss = []
+                returns = []
+                for ri in reversed(range(len(rewards))):
+                    R = rewards[ri] + args.gamma * R
+                    if R >= 0:
+                        for i in range(len(log_prob_ps)):
+                            log_probs.insert(0, log_prob_ps[i])
+                            returns.insert(0, R)
+                    else:
+                        for i in range(len(log_prob_ns)):
+                            log_probs.insert(0, log_prob_ns[i])
+                            returns.insert(0, -R)
+                for lp, r in zip(log_probs, returns):
+                    policy_loss.append((-lp * r).sum().unsqueeze(-1))
                 policy_loss = torch.cat(policy_loss).sum()
                 policy_loss.backward()
                 p_optim.step()
                 p_optim.zero_grad()
 
+                state_dict = torch.load(args.save)
+                model.load_state_dict(state_dict)
+
                 log_prob_ps = []
                 log_prob_ns = []
+                log_probs = []
+                rewards = []
 
 def train(args, model, loss_fn, m_optim, m_scheduler, metric, train_loader, dev_loader, device):
     best_mes = 0.0
@@ -285,7 +325,7 @@ def train(args, model, loss_fn, m_optim, m_scheduler, metric, train_loader, dev_
                         mes = metric.get_mrr(args.qrels, args.res, args.metric)
                     else:
                         mes = metric.get_metric(args.qrels, args.res, args.metric)
-                if mes > best_mes:
+                if mes >= best_mes:
                     best_mes = mes
                     print('save_model...')
                     if torch.cuda.device_count() > 1:
@@ -318,8 +358,9 @@ def main():
     parser.add_argument('-epoch', type=int, default=1)
     parser.add_argument('-batch_size', type=int, default=8)
     parser.add_argument('-lr', type=float, default=2e-5)
-    parser.add_argument('-n_acc_steps', type=int, default=10)
-    parser.add_argument('-tau', type=float, default=2)
+    parser.add_argument('-n_acc_steps', type=int, default=1)
+    parser.add_argument('-tau', type=float, default=1)
+    parser.add_argument('-gamma', type=float, default=0.99)
     parser.add_argument('-n_warmup_steps', type=int, default=1000)
     parser.add_argument('-eval_every', type=int, default=1000)
     args = parser.parse_args()
