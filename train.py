@@ -118,7 +118,7 @@ def train_reinfoselect(args, model, policy, loss_fn, m_optim, m_scheduler, p_opt
                                            train_batch['doc_idx'].to(device), train_batch['doc_mask'].to(device))
                 else:
                     raise ValueError('Task must be `ranking` or `classification`.')
-            dist = Categorical(F.gumbel_softmax(batch_probs, tau=5))
+            dist = Categorical(F.gumbel_softmax(batch_probs, tau=args.tau))
             action = dist.sample()
             if action.sum().item() < 1:
                 m_scheduler.step()
@@ -319,6 +319,7 @@ def main():
     parser.add_argument('-batch_size', type=int, default=8)
     parser.add_argument('-lr', type=float, default=2e-5)
     parser.add_argument('-n_acc_steps', type=int, default=10)
+    parser.add_argument('-tau', type=float, default=2)
     parser.add_argument('-n_warmup_steps', type=int, default=1000)
     parser.add_argument('-eval_every', type=int, default=1000)
     args = parser.parse_args()
