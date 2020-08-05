@@ -164,8 +164,8 @@ class BertDataset(Dataset):
         if self._mode == 'train':
             if self._task == 'ranking':
                 query_tokens = self._tokenizer.tokenize(example['query'])[:self._query_max_len]
-                doc_tokens_pos = self._tokenizer.tokenize(example['doc_pos'])[:self._doc_max_len]
-                doc_tokens_neg = self._tokenizer.tokenize(example['doc_neg'])[:self._doc_max_len]
+                doc_tokens_pos = self._tokenizer.tokenize(example['doc_pos'])[:self._seq_max_len-len(query_tokens)-3]
+                doc_tokens_neg = self._tokenizer.tokenize(example['doc_neg'])[:self._seq_max_len-len(query_tokens)-3]
 
                 input_ids_pos, input_mask_pos, segment_ids_pos = self.pack_bert_features(query_tokens, doc_tokens_pos)
                 input_ids_neg, input_mask_neg, segment_ids_neg = self.pack_bert_features(query_tokens, doc_tokens_neg)
@@ -173,7 +173,7 @@ class BertDataset(Dataset):
                         'input_ids_neg': input_ids_neg, 'segment_ids_neg': segment_ids_neg, 'input_mask_neg': input_mask_neg}
             elif self._task == 'classification':
                 query_tokens = self._tokenizer.tokenize(example['query'])[:self._query_max_len]
-                doc_tokens = self._tokenizer.tokenize(example['doc'])[:self._doc_max_len]
+                doc_tokens = self._tokenizer.tokenize(example['doc'])[:self._seq_max_len-len(query_tokens)-3]
                 
                 input_ids, input_mask, segment_ids = self.pack_bert_features(query_tokens, doc_tokens)
                 return {'input_ids': input_ids, 'segment_ids': segment_ids, 'input_mask': input_mask, 'label': example['label']}
@@ -181,14 +181,14 @@ class BertDataset(Dataset):
                 raise ValueError('Task must be `ranking` or `classification`.')
         elif self._mode == 'dev':
             query_tokens = self._tokenizer.tokenize(example['query'])[:self._query_max_len]
-            doc_tokens = self._tokenizer.tokenize(example['doc'])[:self._doc_max_len]
+            doc_tokens = self._tokenizer.tokenize(example['doc'])[:self._seq_max_len-len(query_tokens)-3]
 
             input_ids, input_mask, segment_ids = self.pack_bert_features(query_tokens, doc_tokens)
             return {'query_id': example['query_id'], 'doc_id': example['doc_id'], 'label': example['label'], 'retrieval_score': example['retrieval_score'],
                     'input_ids': input_ids, 'input_mask': input_mask, 'segment_ids': segment_ids}
         elif self._mode == 'test':
             query_tokens = self._tokenizer.tokenize(example['query'])[:self._query_max_len]
-            doc_tokens = self._tokenizer.tokenize(example['doc'])[:self._doc_max_len]
+            doc_tokens = self._tokenizer.tokenize(example['doc'])[:self._seq_max_len-len(query_tokens)-3]
 
             input_ids, input_mask, segment_ids = self.pack_bert_features(query_tokens, doc_tokens)
             return {'query_id': example['query_id'], 'doc_id': example['doc_id'], 'retrieval_score': example['retrieval_score'],
