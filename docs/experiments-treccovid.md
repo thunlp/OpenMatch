@@ -26,7 +26,7 @@ python ./data/preprocess.py \
   -output ./data/test_trec-covid-round2.jsonl
 ```
 
-Reproduce scibert, NDCG@10: 0.5762.
+Reproduce scibert.
 ```
 CUDA_VISIBLE_DEVICES=0 \
 python inference.py \
@@ -44,7 +44,7 @@ python inference.py \
         -batch_size 32
 ```
 
-Reproduce reinfoselect scibert, NDCG@10: 0.6428.
+Reproduce reinfoselect scibert.
 ```
 CUDA_VISIBLE_DEVICES=0 \
 python inference.py \
@@ -89,7 +89,29 @@ python train.py \
         -eval_every 200
 ```
 
-For ReInfoSelect training, add
+For ReInfoSelect training:
 ```
--reinfoselect
+CUDA_VISIBLE_DEVICES=0 \
+python train.py \
+        -task ranking \
+        -model bert \
+        -reinfoselect \
+        -train ./data/seanmed.train.320K-pairs.jsonl \
+        -max_input 1280000 \
+        -save ./checkpoints/scibert_rl.bin \
+        -dev ./data/dev_trec-covid-round1.jsonl \
+        -qrels qrels-cord19-round1.txt \
+        -vocab allenai/scibert_scivocab_uncased \
+        -pretrain allenai/scibert_scivocab_uncased \
+        -checkpoint ./checkpoints/scibert.bin \
+        -res ./results/scibert_rl.trec \
+        -metric ndcg_cut_10 \
+        -max_query_len 32 \
+        -max_doc_len 256 \
+        -epoch 5 \
+        -batch_size 16 \
+        -lr 2e-5 \
+        -tau 1 \
+        -n_warmup_steps 1000 \
+        -eval_every 10
 ```

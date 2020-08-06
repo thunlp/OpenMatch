@@ -16,4 +16,4 @@ python train.py \
         -epoch 2 \
         -batch_size 32 \
         -lr 1e-3 \
-        -eval_every 1000
+        -eval_every 10
