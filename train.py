@@ -52,6 +52,7 @@ def train_reinfoselect(args, model, policy, loss_fn, m_optim, m_scheduler, p_opt
         else:
             torch.save(model.state_dict(), args.save)
     print('initial result: ', mes)
+    last_mes = mes
     for epoch in range(args.epoch):
         avg_loss = 0.0
         log_prob_ps = []
@@ -111,7 +112,8 @@ def train_reinfoselect(args, model, policy, loss_fn, m_optim, m_scheduler, p_opt
                     print(step+1, avg_loss/len(log_prob_ps), mes, best_mes)
                     avg_loss = 0.0
 
-                    reward = mes - best_mes
+                    reward = mes - last_mes
+                    last_mes = mes
                     if reward >= 0:
                         policy_loss = [(-log_prob_p * reward).sum().unsqueeze(-1) for log_prob_p in log_prob_ps]
                     else:
@@ -121,8 +123,9 @@ def train_reinfoselect(args, model, policy, loss_fn, m_optim, m_scheduler, p_opt
                     p_optim.step()
                     p_optim.zero_grad()
 
-                    state_dict = torch.load(args.save)
-                    model.load_state_dict(state_dict)
+                    #state_dict = torch.load(args.save)
+                    #model.load_state_dict(state_dict)
+                    #last_mes = best_mes
                     log_prob_ps = []
                     log_prob_ns = []
                 continue
@@ -221,7 +224,8 @@ def train_reinfoselect(args, model, policy, loss_fn, m_optim, m_scheduler, p_opt
                 print(step+1, avg_loss/len(log_prob_ps), mes, best_mes)
                 avg_loss = 0.0
 
-                reward = mes - best_mes
+                reward = mes - last_mes
+                last_mes = mes
                 if reward >= 0:
                     policy_loss = [(-log_prob_p * reward).sum().unsqueeze(-1) for log_prob_p in log_prob_ps]
                 else:
@@ -231,8 +235,9 @@ def train_reinfoselect(args, model, policy, loss_fn, m_optim, m_scheduler, p_opt
                 p_optim.step()
                 p_optim.zero_grad()
 
-                state_dict = torch.load(args.save)
-                model.load_state_dict(state_dict)
+                #state_dict = torch.load(args.save)
+                #model.load_state_dict(state_dict)
+                #last_mes = best_mes
                 log_prob_ps = []
                 log_prob_ns = []
 

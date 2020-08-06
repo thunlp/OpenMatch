@@ -113,5 +113,5 @@ python train.py \
         -lr 2e-5 \
         -tau 1 \
         -n_warmup_steps 1000 \
-        -eval_every 10
+        -eval_every 1
 ```
