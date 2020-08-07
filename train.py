@@ -3,6 +3,7 @@ import argparse
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.distributions import Categorical
 
 from transformers import AutoTokenizer, get_linear_schedule_with_warmup
 import OpenMatch as om
@@ -91,7 +92,8 @@ def train_reinfoselect(args, model, policy, loss_fn, m_optim, m_scheduler, p_opt
                 else:
                     raise ValueError('Task must be `ranking` or `classification`.')
             batch_probs = F.gumbel_softmax(batch_probs, tau=args.tau)
-            action = batch_probs.argmax(dim=-1)
+            m = Categorical(batch_probs)
+            action = m.sample()
             if action.sum().item() < 1:
                 m_scheduler.step()
                 if (step+1) % args.eval_every == 0 and len(log_prob_ps) > 0:
@@ -123,9 +125,10 @@ def train_reinfoselect(args, model, policy, loss_fn, m_optim, m_scheduler, p_opt
                     p_optim.step()
                     p_optim.zero_grad()
 
-                    #state_dict = torch.load(args.save)
-                    #model.load_state_dict(state_dict)
-                    #last_mes = best_mes
+                    if args.reset:
+                        state_dict = torch.load(args.save)
+                        model.load_state_dict(state_dict)
+                        last_mes = best_mes
                     log_prob_ps = []
                     log_prob_ns = []
                 continue
@@ -186,8 +189,8 @@ def train_reinfoselect(args, model, policy, loss_fn, m_optim, m_scheduler, p_opt
                     raise ValueError('Task must be `ranking` or `classification`.')
 
             mask = action.ge(0.5)
-            log_prob_p = torch.masked_select(batch_probs[:, 1].log(), mask)
-            log_prob_n = torch.masked_select(batch_probs[:, 0].log(), mask)
+            log_prob_p = torch.masked_select(m.log_prob(action), mask)
+            log_prob_n = torch.masked_select(m.log_prob(1-action), mask)
             log_prob_ps.append(log_prob_p)
             log_prob_ns.append(log_prob_n)
 
@@ -235,9 +238,10 @@ def train_reinfoselect(args, model, policy, loss_fn, m_optim, m_scheduler, p_opt
                 p_optim.step()
                 p_optim.zero_grad()
 
-                #state_dict = torch.load(args.save)
-                #model.load_state_dict(state_dict)
-                #last_mes = best_mes
+                if args.reset:
+                    state_dict = torch.load(args.save)
+                    model.load_state_dict(state_dict)
+                    last_mes = best_mes
                 log_prob_ps = []
                 log_prob_ns = []
 
@@ -330,6 +334,7 @@ def main():
     parser.add_argument('-task', type=str, default='ranking')
     parser.add_argument('-model', type=str, default='bert')
     parser.add_argument('-reinfoselect', action='store_true', default=False)
+    parser.add_argument('-reset', action='store_true', default=False)
     parser.add_argument('-train', action=om.utils.DictOrStr, default='./data/train_toy.jsonl')
     parser.add_argument('-max_input', type=int, default=1280000)
     parser.add_argument('-save', type=str, default='./checkpoints/bert.bin')
