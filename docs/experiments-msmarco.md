@@ -9,7 +9,7 @@ wget https://msmarco.blob.core.windows.net/msmarcoranking/collection.tar.gz -P .
 tar -zxvf ./data/collection.tar.gz -C ./data/
 ```
 
-Reproduce bert, MRR@10(dev): 0.3494.
+Reproduce bert-base, MRR@10(dev): 0.3494.
 ```
 CUDA_VISIBLE_DEVICES=0 \
 python inference.py \
@@ -21,6 +21,23 @@ python inference.py \
         -pretrain bert-base-uncased \
         -checkpoint ./checkpoints/bert-base.bin \
         -res ./results/bert-base_msmarco-dev.trec \
+        -max_query_len 32 \
+        -max_doc_len 221 \
+        -batch_size 256
+```
+
+Reproduce electra-base, MRR@10(dev): 0.3518.
+```
+CUDA_VISIBLE_DEVICES=0 \
+python inference.py \
+        -task ranking \
+        -model bert \
+        -max_input 12800000 \
+        -test queries=./data/queries.dev.small.tsv,docs=./data/collection.tsv,trec=./data/run.msmarco-passage.dev.small.trec \
+        -vocab google/electra-base-discriminator \
+        -pretrain google/electra-base-discriminator \
+        -checkpoint ./checkpoints/electra-base.bin \
+        -res ./results/electra-base_msmarco-dev.trec \
         -max_query_len 32 \
         -max_doc_len 221 \
         -batch_size 256
