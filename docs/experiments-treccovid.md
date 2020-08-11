@@ -65,6 +65,16 @@ python inference.py \
 ## train
 Get training data from [google drive](https://drive.google.com/file/d/1BT5gCOb1Kxkfh0BWqgUSgkxp2JPpRIWm/view?usp=sharing).
 
+Preprocess round1 data.
+```
+python ./data/preprocess.py \
+  -input_trec anserini.covid-r1.fusion1.txt \
+  -input_qrels qrels-cord19-round1.txt \
+  -input_queries questions_cord19-rnd1.txt \
+  -input_docs cord19_0501_titabs.jsonl \
+  -output ./data/dev_trec-covid-round1.jsonl
+```
+
 Train.
 ```
 CUDA_VISIBLE_DEVICES=0 \

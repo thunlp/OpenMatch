@@ -469,7 +469,7 @@ def main():
     )
     dev_loader = om.data.DataLoader(
         dataset=dev_set,
-        batch_size=args.batch_size,
+        batch_size=args.batch_size * 16,
         shuffle=False,
         num_workers=8
     )
