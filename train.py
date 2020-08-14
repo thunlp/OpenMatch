@@ -188,9 +188,8 @@ def train_reinfoselect(args, model, policy, loss_fn, m_optim, m_scheduler, p_opt
                 else:
                     raise ValueError('Task must be `ranking` or `classification`.')
 
-            mask = action.ge(0.5)
-            log_prob_p = torch.masked_select(m.log_prob(action), mask)
-            log_prob_n = torch.masked_select(m.log_prob(1-action), mask)
+            log_prob_p = m.log_prob(action)
+            log_prob_n = m.log_prob(1-action)
             log_prob_ps.append(log_prob_p)
             log_prob_ns.append(log_prob_n)
 

@@ -103,9 +103,10 @@ For ReInfoSelect training:
 ```
 CUDA_VISIBLE_DEVICES=0 \
 python train.py \
-        -task ranking \
+        -task classification \
         -model bert \
         -reinfoselect \
+        -reset \
         -train ./data/seanmed.train.320K-pairs.jsonl \
         -max_input 1280000 \
         -save ./checkpoints/scibert_rl.bin \
@@ -119,9 +120,9 @@ python train.py \
         -max_query_len 32 \
         -max_doc_len 256 \
         -epoch 5 \
-        -batch_size 16 \
+        -batch_size 8 \
         -lr 2e-5 \
         -tau 1 \
-        -n_warmup_steps 1000 \
+        -n_warmup_steps 5000 \
         -eval_every 1
 ```
