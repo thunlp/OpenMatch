@@ -133,7 +133,7 @@ class RobertaDataset(Dataset):
     def pack_roberta_features(self, query_tokens: List[str], doc_tokens: List[str]):
         input_tokens = [self._tokenizer.cls_token] + query_tokens + [self._tokenizer.sep_token] * 2 + doc_tokens + [self._tokenizer.sep_token]
         input_ids = self._tokenizer.convert_tokens_to_ids(input_tokens)
-        input_mask = [1] * len(input_tokens)
+        input_mask = [0] + ([1] * len(query_tokens)) + [0, 0] + ([1] * len(doc_tokens)) + [0]
 
         padding_len = self._seq_max_len - len(input_ids)
         input_ids = input_ids + [self._tokenizer.pad_token_id] * padding_len
