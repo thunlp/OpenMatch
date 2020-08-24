@@ -1,4 +1,5 @@
-# MS MARCO
+# MS MARCO Passage Ranking
+Given a query q and a the 1000 most relevant passages P = p1, p2, p3,... p1000, as retrieved by BM25 a successful system is expected to rerank the most relevant passage as high as possible. For this task not all 1000 relevant items have a human labeled relevant passage. Evaluation will be done using MRR. More details are available at [MSMARCO-Passage-Ranking](https://github.com/microsoft/MSMARCO-Passage-Ranking).
 
 ## Inference
 

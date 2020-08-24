@@ -125,7 +125,7 @@ unzip ./data/glove.6B.zip -d ./data
 ```
 
 ## Experiments
-\* Ad-hoc search, all results is measured on ndcg@20 with 5 fold cross-validation.
+\* [Ad-hoc Search](./docs/experiments-adhoc.md).
 
   |Model|ClueWeb09|Robust04|ClueWeb12|
   |:---:|:-------:|:------:|:-------:|
@@ -133,10 +133,17 @@ unzip ./data/glove.6B.zip -d ./data
   |Conv-KNRM|0.1894|0.2907|0.0896|
   |EDRM|0.2015|0.2993|0.0937|
   |TK|0.2306|0.2822|0.0966|
-  |BERT|0.2701|0.4168|0.1183|
-  |ELECTRA|0.2861|0.4668|0.1078|
+  |BERT Base|0.2701|0.4168|0.1183|
+  |ELECTRA Base|0.2861|0.4668|0.1078|
 
 \* [MS MARCO Passage Ranking](./docs/experiments-msmarco.md)
+
+  |Model|eval|dev|
+  |:---:|:--:|:-:|
+  |BERT Base|0.345|0.349|
+  |ELECTRA Base|0.344|0.352|
+  |RoBERTa Large|0.375|0.386|
+  |ELECTRA Large|0.376|0.388|
 
 
 ## Contribution
