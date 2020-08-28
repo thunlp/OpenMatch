@@ -22,11 +22,17 @@ def main():
                 line = line.strip().split('\t')
                 qs[line[0]] = line[1]
 
-    ps = {}
-    with open(args.input_docs, 'r') as r:
-        for line in r:
-            line = json.loads(line)
-            ps[line['paper_id']] = ' '.join([line['title'], line['abstract']]).replace('\n', ' ').replace('\t', ' ').strip()
+    ds = {}
+    if args.input_queries.split('.')[-1] == 'json' or args.input_queries.split('.')[-1] == 'jsonl':
+        with open(args.input_docs, 'r') as r:
+            for line in r:
+                line = json.loads(line)
+                ds[line['paper_id']] = ' '.join([line['title'], line['abstract']]).replace('\n', ' ').replace('\t', ' ').strip()
+    else:
+        with open(args.input_docs, 'r') as r:
+            for line in r:
+                line = line.strip().split('\t')
+                ds[line[0]] = line[1]
 
     if args.input_qrels is not None:
         qpls = {}
@@ -41,16 +47,16 @@ def main():
     with open(args.input_trec, 'r') as r:
         for line in r:
             line = line.strip().split()
-            if line[0] not in qs or line[2] not in ps:
+            if line[0] not in qs or line[2] not in ds:
                 continue
             if args.input_qrels is not None:
                 if line[0] in qpls and line[2] in qpls[line[0]]:
                     label = qpls[line[0]][line[2]]
                 else:
                     label = 0
-                f.write(json.dumps({'query': qs[line[0]], 'doc': ps[line[2]], 'label': label, 'query_id': line[0], 'doc_id': line[2], 'retrieval_score': float(line[4])}) + '\n')
+                f.write(json.dumps({'query': qs[line[0]], 'doc': ds[line[2]], 'label': label, 'query_id': line[0], 'doc_id': line[2], 'retrieval_score': float(line[4])}) + '\n')
             else:
-                f.write(json.dumps({'query': qs[line[0]], 'doc': ps[line[2]], 'query_id': line[0], 'doc_id': line[2], 'retrieval_score': float(line[4])}) + '\n')
+                f.write(json.dumps({'query': qs[line[0]], 'doc': ds[line[2]], 'query_id': line[0], 'doc_id': line[2], 'retrieval_score': float(line[4])}) + '\n')
     f.close()
 
 if __name__ == "__main__":

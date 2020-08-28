@@ -125,7 +125,7 @@ unzip ./data/glove.6B.zip -d ./data
 ```
 
 ## Experiments
-\* [Ad-hoc Search](./docs/experiments-adhoc.md).
+\* [Ad-hoc Search](./docs/experiments-adhoc.md)
 
   |Model|ClueWeb09|Robust04|ClueWeb12|
   |:---:|:-------:|:------:|:-------:|
@@ -145,6 +145,7 @@ unzip ./data/glove.6B.zip -d ./data
   |RoBERTa Large|0.375|0.386|
   |ELECTRA Large|0.376|0.388|
 
+\* [MS MARCO Document Ranking](./docs/experiments-msmarco-doc.md)
 
 ## Contribution
 Thanks to all the people who contributed to OpenMatch!
