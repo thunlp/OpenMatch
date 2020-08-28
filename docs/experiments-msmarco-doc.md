@@ -1,5 +1,5 @@
 # MS MARCO Document Ranking
-First, get the official data from [MSMARCO-Document-Ranking](https://github.com/microsoft/MSMARCO-Document-Ranking).
+First, get the official data from [TREC-2019-Deep-Learning](https://microsoft.github.io/TREC-2019-Deep-Learning/).
 
 Get data and checkpoint from [Google Drive](https://drive.google.com/drive/folders/1cE_CUJFpfCUPOYSIDMYdz6_g3Zgccslj?usp=sharing). We provide the train data(qid \t pos\_did \t neg\_did), one can easily lookup query/doc texts from official files. The training data is generated from official train\_qrels and train\_top100 files, we randomly sampled 10 negative docs for each training query from top100 docs.
 
