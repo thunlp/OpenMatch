@@ -32,7 +32,10 @@ def main():
         with open(args.input_docs, 'r') as r:
             for line in r:
                 line = line.strip().split('\t')
-                ds[line[0]] = line[1]
+                if len(line) > 2:
+                    ds[line[0]] = line[-2] + ' ' + line[-1]
+                else:
+                    ds[line[0]] = line[1]
 
     if args.input_qrels is not None:
         qpls = {}
