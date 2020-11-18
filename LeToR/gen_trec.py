@@ -15,6 +15,12 @@ def main():
                 line = line.strip('\n').split('\t')
                 score_dic[line[0] + '$' + line[1]] = line[2]
 
+    if args.k == -1:
+        with open('f' + str(args.k+1) + '.score', 'r') as r:
+            for line in r:
+                line = line.strip('\n').split('\t')
+                score_dic[line[0] + '$' + line[1]] = line[2]
+
     outs = {}
     with open(args.dev, 'r') as r:
         qid = ''
@@ -25,7 +31,7 @@ def main():
                 qid = line['query_id']
                 cnt = 0
                 outs[line['query_id']] = {}
-            outs[line['query_id']][line['paper_id']] = float(score_dic[line['query_id']+'$'+str(cnt)])
+            outs[line['query_id']][line['doc_id']] = float(score_dic[line['query_id']+'$'+str(cnt)])
             cnt += 1
 
     f = open(args.res, 'w')

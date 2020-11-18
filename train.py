@@ -30,10 +30,10 @@ def dev(args, model, metric, dev_loader, device):
                 batch_score = batch_score.softmax(dim=-1)[:, 1].squeeze(-1)
             batch_score = batch_score.detach().cpu().tolist()
             for (q_id, d_id, b_s, l) in zip(query_id, doc_id, batch_score, label):
-                if q_id in rst_dict:
-                    rst_dict[q_id].append((b_s, d_id, l))
-                else:
-                    rst_dict[q_id] = [(b_s, d_id, l)]
+                if q_id not in rst_dict:
+                    rst_dict[q_id] = {}
+                if d_id not in rst_dict[q_id] or b_s > rst_dict[q_id][d_id][0]:
+                    rst_dict[q_id][d_id] = [b_s, l]
     return rst_dict
 
 def train_reinfoselect(args, model, policy, loss_fn, m_optim, m_scheduler, p_optim, metric, train_loader, dev_loader, device):

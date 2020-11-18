@@ -28,10 +28,10 @@ def test(args, model, test_loader, device):
                 batch_score = batch_score.softmax(dim=-1)[:, 1].squeeze(-1)
             batch_score = batch_score.detach().cpu().tolist()
             for (q_id, d_id, b_s) in zip(query_id, doc_id, batch_score):
-                if q_id in rst_dict:
-                    rst_dict[q_id].append((b_s, d_id))
-                else:
-                    rst_dict[q_id] = [(b_s, d_id)]
+                if q_id not in rst_dict:
+                    rst_dict[q_id] = {}
+                if d_id not in rst_dict[q_id] or b_s > rst_dict[q_id][d_id]:
+                    rst_dict[q_id][d_id] = [b_s]
     return rst_dict
 
 def main():

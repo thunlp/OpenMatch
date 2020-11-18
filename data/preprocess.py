@@ -27,15 +27,19 @@ def main():
         with open(args.input_docs, 'r') as r:
             for line in r:
                 line = json.loads(line)
-                ds[line['paper_id']] = ' '.join([line['title'], line['abstract']]).replace('\n', ' ').replace('\t', ' ').strip()
+                ds[line['doc_id']] = ' '.join([line['title'], line['abstract']]).replace('\n', ' ').replace('\t', ' ').strip()
     else:
         with open(args.input_docs, 'r') as r:
             for line in r:
-                line = line.strip().split('\t')
+                line = line.strip('\n').split('\t')
                 if len(line) > 2:
                     ds[line[0]] = line[-2] + ' ' + line[-1]
                 else:
-                    ds[line[0]] = line[1]
+                    try:
+                        ds[line[0]] = line[1]
+                    except:
+                        print(line)
+                        exit()
 
     if args.input_qrels is not None:
         qpls = {}

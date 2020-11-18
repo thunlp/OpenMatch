@@ -8,6 +8,7 @@ import OpenMatch as om
 
 def dev(args, model, dev_loader, device):
     features = []
+    rst_dict = {}
     for dev_batch in dev_loader:
         query_id, doc_id, label, retrieval_score = dev_batch['query_id'], dev_batch['doc_id'], dev_batch['label'], dev_batch['retrieval_score']
         with torch.no_grad():
@@ -26,6 +27,7 @@ def dev(args, model, dev_loader, device):
                                                    dev_batch['doc_idx'].to(device), dev_batch['doc_mask'].to(device))
             if args.task == 'classification':
                 batch_score = batch_score.softmax(dim=-1)[:, 1].squeeze(-1)
+            
             batch_score = batch_score.detach().cpu().tolist()
             batch_feature = batch_feature.detach().cpu().tolist()
             retrieval_score = retrieval_score.tolist()
@@ -35,9 +37,16 @@ def dev(args, model, dev_loader, device):
                 feature.append('id:' + q_id)
                 for i, fi in enumerate(b_f):
                     feature.append(str(i+1) + ':' + str(fi))
-                feature.append(str(i+2) + ':' + str(r_s))
+                feature.append(str(i+2) + ':' + str(b_s))
+                feature.append(str(i+3) + ':' + str(r_s))
                 features.append(' '.join(feature))
-    return features
+
+            for (q_id, d_id, b_s) in zip(query_id, doc_id, batch_score):
+                if q_id not in rst_dict:
+                    rst_dict[q_id] = {}
+                if d_id not in rst_dict[q_id] or b_s > rst_dict[q_id][d_id][0]:
+                    rst_dict[q_id][d_id] = [b_s]
+    return features, rst_dict
 
 def main():
     parser = argparse.ArgumentParser()
@@ -49,7 +58,7 @@ def main():
     parser.add_argument('-ent_vocab', type=str, default='')
     parser.add_argument('-pretrain', type=str, default='allenai/scibert_scivocab_uncased')
     parser.add_argument('-checkpoint', type=str, default='./checkpoints/bert.bin')
-    parser.add_argument('-res', type=str, default='./features/bert_features')
+    parser.add_argument('-res', type=str, default='./features/bert-base_fusion_firstp_features')
     parser.add_argument('-mode', type=str, default='cls')
     parser.add_argument('-n_kernels', type=int, default=21)
     parser.add_argument('-max_query_len', type=int, default=32)
@@ -198,8 +207,9 @@ def main():
     if torch.cuda.device_count() > 1:
         model = nn.DataParallel(model)
 
-    features = dev(args, model, dev_loader, device)
+    features, rst_dict = dev(args, model, dev_loader, device)
     om.utils.save_features(args.res, features)
+    om.utils.save_trec(args.res.replace("_features", ".trec").replace("features", "results"), rst_dict)
 
 if __name__ == "__main__":
     main()

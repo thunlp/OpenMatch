@@ -19,6 +19,7 @@ class Bert(nn.Module):
 
         self._config = AutoConfig.from_pretrained(self._pretrained)
         self._model = AutoModel.from_pretrained(self._pretrained, config=self._config)
+
         if self._task == 'ranking':
             self._dense = nn.Linear(self._config.hidden_size, 1)
         elif self._task == 'classification':
@@ -29,9 +30,10 @@ class Bert(nn.Module):
     def forward(self, input_ids: torch.Tensor, input_mask: torch.Tensor = None, segment_ids: torch.Tensor = None) -> Tuple[torch.Tensor, torch.Tensor]:
         output = self._model(input_ids, attention_mask = input_mask, token_type_ids = segment_ids)
         if self._mode == 'cls':
-            score = self._dense(output[0][:, 0, :]).squeeze(-1)
+            logits = output[0][:, 0, :]
         elif self._mode == 'pooling':
-            score = self._dense(output[1]).squeeze(-1)
+            logits = output[1]
         else:
             raise ValueError('Mode must be `cls` or `pooling`.')
-        return score, output[0][:, 0, :]
+        score = self._dense(logits).squeeze(-1)
+        return score, logits

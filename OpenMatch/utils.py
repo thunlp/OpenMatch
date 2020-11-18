@@ -21,9 +21,9 @@ def check_dir(path):
 def save_trec(rst_file, rst_dict):
     with open(rst_file, 'w') as writer:
         for q_id, scores in rst_dict.items():
-            res = sorted(scores, key=lambda x: x[0], reverse=True)
+            res = sorted(scores.items(), key=lambda x: x[1][0], reverse=True)
             for rank, value in enumerate(res):
-                writer.write(q_id+' Q0 '+str(value[1])+' '+str(rank+1)+' '+str(value[0])+' openmatch\n')
+                writer.write(q_id+' Q0 '+str(value[0])+' '+str(rank+1)+' '+str(value[1][0])+' openmatch\n')
     return
 
 def save_features(rst_file, features):
