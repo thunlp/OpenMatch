@@ -361,25 +361,47 @@ def main():
     if args.model == 'bert':
         tokenizer = AutoTokenizer.from_pretrained(args.vocab)
         print('reading training data...')
-        train_set = om.data.datasets.BertDataset(
-            dataset=args.train,
-            tokenizer=tokenizer,
-            mode='train',
-            query_max_len=args.max_query_len,
-            doc_max_len=args.max_doc_len,
-            max_input=args.max_input,
-            task=args.task
-        )
+        if args.maxp:
+            train_set = om.data.datasets.BertMaxPDataset(
+                dataset=args.train,
+                tokenizer=tokenizer,
+                mode='train',
+                query_max_len=args.max_query_len,
+                doc_max_len=args.max_doc_len,
+                max_input=args.max_input,
+                task=args.task
+            )
+        else:
+            train_set = om.data.datasets.BertDataset(
+                dataset=args.train,
+                tokenizer=tokenizer,
+                mode='train',
+                query_max_len=args.max_query_len,
+                doc_max_len=args.max_doc_len,
+                max_input=args.max_input,
+                task=args.task
+            )
         print('reading dev data...')
-        dev_set = om.data.datasets.BertDataset(
-            dataset=args.dev,
-            tokenizer=tokenizer,
-            mode='dev',
-            query_max_len=args.max_query_len,
-            doc_max_len=args.max_doc_len,
-            max_input=args.max_input,
-            task=args.task
-        )
+        if args.maxp:
+            dev_set = om.data.datasets.BertMaxPDataset(
+                dataset=args.dev,
+                tokenizer=tokenizer,
+                mode='dev',
+                query_max_len=args.max_query_len,
+                doc_max_len=args.max_doc_len,
+                max_input=args.max_input,
+                task=args.task
+            )
+        else:
+            dev_set = om.data.datasets.BertDataset(
+                dataset=args.dev,
+                tokenizer=tokenizer,
+                mode='dev',
+                query_max_len=args.max_query_len,
+                doc_max_len=args.max_doc_len,
+                max_input=args.max_input,
+               task=args.task
+            )
     elif args.model == 'roberta':
         tokenizer = AutoTokenizer.from_pretrained(args.vocab)
         print('reading training data...')
@@ -474,11 +496,20 @@ def main():
     )
 
     if args.model == 'bert' or args.model == 'roberta':
-        model = om.models.Bert(
-            pretrained=args.pretrain,
-            mode=args.mode,
-            task=args.task
-        )
+        if args.maxp:
+            model = om.models.BertMaxP(
+                pretrained=args.pretrain,
+                max_query_len=args.max_query_len,
+                max_doc_len=args.max_doc_len,
+                mode=args.mode,
+                task=args.task
+            )
+        else:
+            model = om.models.Bert(
+                pretrained=args.pretrain,
+                mode=args.mode,
+                task=args.task
+            )
         if args.reinfoselect:
             policy = om.models.Bert(
                 pretrained=args.pretrain,

@@ -63,6 +63,7 @@ def main():
     parser.add_argument('-n_kernels', type=int, default=21)
     parser.add_argument('-max_query_len', type=int, default=32)
     parser.add_argument('-max_doc_len', type=int, default=256)
+    parser.add_argument('-maxp', action='store_true', default=False)
     parser.add_argument('-batch_size', type=int, default=32)
     args = parser.parse_args()
 
@@ -70,15 +71,26 @@ def main():
     if args.model == 'bert':
         tokenizer = AutoTokenizer.from_pretrained(args.vocab)
         print('reading dev data...')
-        dev_set = om.data.datasets.BertDataset(
-            dataset=args.dev,
-            tokenizer=tokenizer,
-            mode='dev',
-            query_max_len=args.max_query_len,
-            doc_max_len=args.max_doc_len,
-            max_input=args.max_input,
-            task=args.task
-        )
+        if args.maxp:
+            dev_set = om.data.datasets.BertMaxPDataset(
+                dataset=args.dev,
+                tokenizer=tokenizer,
+                mode='dev',
+                query_max_len=args.max_query_len,
+                doc_max_len=args.max_doc_len,
+                max_input=args.max_input,
+                task=args.task
+            )
+        else:
+            dev_set = om.data.datasets.BertDataset(
+                dataset=args.dev,
+                tokenizer=tokenizer,
+                mode='dev',
+                query_max_len=args.max_query_len,
+                doc_max_len=args.max_doc_len,
+                max_input=args.max_input,
+                task=args.task
+            )
     elif args.model == 'roberta':
         tokenizer = AutoTokenizer.from_pretrained(args.vocab)
         print('reading dev data...')
@@ -134,11 +146,20 @@ def main():
     )
 
     if args.model == 'bert' or args.model == 'roberta':
-        model = om.models.Bert(
-            pretrained=args.pretrain,
-            mode=args.mode,
-            task=args.task
-        )
+        if args.maxp:
+            model = om.models.BertMaxP(
+                pretrained=args.pretrain,
+                max_query_len=args.max_query_len,
+                max_doc_len=args.max_doc_len,
+                mode=args.mode,
+                task=args.task
+            )
+        else:
+            model = om.models.Bert(
+                pretrained=args.pretrain,
+                mode=args.mode,
+                task=args.task
+            )
     elif args.model == 'edrm':
         model = om.models.EDRM(
             wrd_vocab_size=tokenizer.get_vocab_size(),
