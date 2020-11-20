@@ -79,6 +79,17 @@ cd OpenMatch
 python setup.py install
 ```
 
+#### \* From Docker
+To build an OpenMatch docker image from Dockerfile 
+```
+docker build -t <image_name> .
+```
+
+To run your docker image just built above as a container
+```
+docker run --gpus all --name=<container_name> -it -v /:/ --rm <image_name>
+```
+
 ## Quick Start
 
 \*  Detailed examples are available [here](./docs/openmatch.md).
