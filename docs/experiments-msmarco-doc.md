@@ -1,60 +1,202 @@
 # MS MARCO Document Ranking
-First, get the official data from [TREC-2019-Deep-Learning](https://microsoft.github.io/TREC-2019-Deep-Learning/).
-
-Get data and checkpoint from [Google Drive](https://drive.google.com/drive/folders/1cE_CUJFpfCUPOYSIDMYdz6_g3Zgccslj?usp=sharing). We provide the train data(qid \t pos\_did \t neg\_did), one can easily lookup query/doc texts from official files. The training data is generated from official train\_qrels and train\_top100 files, we randomly sampled 10 negative docs for each training query from top100 docs.
+First, get the official data from [MSMARCO-Document-Ranking](https://github.com/microsoft/MSMARCO-Document-Ranking). For BERT FirstP, we concatenate the title and content of each document by a '[SEP]'. For BERT MaxP, we only use the content of each document. To reproduce our runs, we need to preprocess the official document file to the format: *doc_id \t doc*.
 
 ## Inference
 
-### Full Ranking
+### BERT FirstP
 
-### Re-Ranking
+We provide the ANCE FirstP top-100 documents of [dev](https://thunlp.oss-cn-qingdao.aliyuncs.com/OpenMatch/MSMARCO/document_ranking/ANCE_FirstP_dev.trec.zip) and [docleaderboard](https://thunlp.oss-cn-qingdao.aliyuncs.com/OpenMatch/MSMARCO/document_ranking/ANCE_FirstP_eval.trec.zip) queries in aliyun in standard TREC format. You can click to download these data.
 
-Preprocess dev dataset:
+Preprocess dev and eval dataset, *msmarco-docs-firstp.tsv* is the preprocessed document file, each line is *doc_id \t title [SEP] content*:
 ```
-python data/preprocess.py -input_trec data/msmarco-docdev-top100 -input_queries data/msmarco-docdev-queries.tsv -input_docs data/msmarco-docs.tsv -output data/msmarco-doc.dev.jsonl
+python data/preprocess.py -input_trec data/ANCE_FirstP_dev.trec -input_qrels data/msmarco-docdev-qrels.tsv -input_queries data/msmarco-docdev-queries.tsv -input_docs data/msmarco-docs-firstp.tsv -output data/msmarco-doc_dev_firstp.jsonl
+python data/preprocess.py -input_trec data/ANCE_FirstP_eval.trec -input_queries data/docleaderboard-queries.tsv -input_docs data/msmarco-docs-firstp.tsv -output data/msmarco-doc_eval_firstp.jsonl
 ```
 
-Reproduce BERT-Base-firstP, MRR@100(dev): 0.3590. *fiestP* mean all docs are truncated, only the first 512 sub-words are remained.
+The checkpoint of BERT Base FirstP is available at [BERT-Base-ANCE-FirstP](https://thunlp.oss-cn-qingdao.aliyuncs.com/OpenMatch/MSMARCO/document_ranking/bert-base_ance_firstp.bin.zip). Now you can reproduce *ANCE FirstP + BERT Base FirstP*, MRR@100(dev): 0.4079.
 
 ```
 CUDA_VISIBLE_DEVICES=0 \
 python inference.py \
-        -task ranking \
+        -task classification \
         -model bert \
         -max_input 12800000 \
-        -test ./data/msmarco-doc.dev.jsonl \
+        -test ./data/msmarco-doc_dev_firstp.jsonl \
         -vocab bert-base-uncased \
         -pretrain bert-base-uncased \
-        -checkpoint ./checkpoints/bert-base_marco-doc_firstp.bin \
-        -res ./results/bert-base_msmarco-doc-dev_firstp.trec \
-        -max_query_len 32 \
-        -max_doc_len 477 \
+        -checkpoint ./checkpoints/bert-base_ance_firstp.bin \
+        -res ./results/bert-base_ance_dev_firstp.trec \
+        -max_query_len 64 \
+        -max_doc_len 445 \
+        -batch_size 256
+```
+
+### BERT MaxP
+
+ANCE MaxP top-100 documents of [dev](https://thunlp.oss-cn-qingdao.aliyuncs.com/OpenMatch/MSMARCO/document_ranking/ANCE_MaxP_dev.trec.zip) and [docleaderboard](https://thunlp.oss-cn-qingdao.aliyuncs.com/OpenMatch/MSMARCO/document_ranking/ANCE_MaxP_eval.trec.zip) queries are also provided.
+
+Preprocess dev dataset, *msmarco-docs-maxp.tsv* is the preprocessed document file, each line is *doc_id \t content*:
+```
+python data/preprocess.py -input_trec data/ANCE_FirstP_dev.trec -input_qrels data/msmarco-docdev-qrels.tsv -input_queries data/msmarco-docdev-queries.tsv -input_docs data/msmarco-docs-firstp.tsv -output data/msmarco-doc_dev_maxp.jsonl
+python data/preprocess.py -input_trec data/ANCE_FirstP_eval.trec -input_queries data/docleaderboard-queries.tsv -input_docs data/msmarco-docs-firstp.tsv -output data/msmarco-doc_eval_maxp.jsonl
+```
+
+The checkpoint of BERT Base MaxP is available at [BERT-Base-ANCE-MaxP](https://thunlp.oss-cn-qingdao.aliyuncs.com/OpenMatch/MSMARCO/document_ranking/bert-base_ance_maxp.bin.zip). Now you can reproduce *ANCE MaxP + BERT Base MaxP*, MRR@100(dev): 0.4094.
+
+```
+CUDA_VISIBLE_DEVICES=0 \
+python inference.py \
+        -task classification \
+        -model bert \
+        -max_input 12800000 \
+        -test ./data/msmarco-doc_dev_maxp.jsonl \
+        -vocab bert-base-uncased \
+        -pretrain bert-base-uncased \
+        -checkpoint ./checkpoints/bert-base_ance_maxp.bin \
+        -res ./results/bert-base_ance_dev_maxp.trec \
+        -max_query_len 64 \
+        -max_doc_len 445 \
+        -maxp \
         -batch_size 64
+```
+
+We also provide the weights of BERT Base MaxP features learned by Coor-Ascent: [F-MaxP](https://thunlp.oss-cn-qingdao.aliyuncs.com/OpenMatch/MSMARCO/document_ranking/f_maxp.ca). First, generate the BERT Base MaxP features of eval dataset.
+
+```
+CUDA_VISIBLE_DEVICES=0 \
+python gen_feature.py \
+        -task classification \
+        -model bert \
+        -max_input 12800000 \
+        -dev ./data/msmarco-doc_eval_maxp.jsonl \
+        -vocab bert-base-uncased \
+        -pretrain bert-base-uncased \
+        -checkpoint ./checkpoints/bert-base_ance_maxp.bin \
+        -res ./features/bert-base_ance_eval_maxp_features \
+        -max_query_len 64 \
+        -max_doc_len 445 \
+        -maxp \
+        -batch_size 64
+```
+
+Then, we compute the ranking score using the weights.
+
+```
+java -jar LeToR/RankLib-2.1-patched.jar -load checkpoints/f_maxp.ca -rank features/bert-base_ance_eval_maxp_features -score f0.score
+python LeToR/gen_trec.py -dev data/msmarco-doc_eval_maxp.jsonl -res results/bert-base_ance_eval_maxp_ca.trec -k -1
 ```
 
 ## train
 
-Train.
+You can also finetune BERT yourself instead of using our checkpoints.
+
+### BERT FirstP
+
+We provide our training data (qid did label): [Training-Data-FirstP](https://thunlp.oss-cn-qingdao.aliyuncs.com/OpenMatch/MSMARCO/document_ranking/bids_marco-doc_ance-firstp-10.tsv.zip). 10 negative documents are randomly sampled for each training query from ANCE FirstP top-100 documents. Since the dev dataset is too large to evaluate every 10000 steps, we only evaluate the top-100 documents of the first 50 dev queries: *msmarco-doc_dev_firstp-50.jsonl*.
 
 ```
 CUDA_VISIBLE_DEVICES=0 \
 python train.py \
-        -task ranking \
+        -task classification \
         -model bert \
-        -train  queries=./data/msmarco-doctrain-queries.tsv,docs=./data/msmarco-docs.tsv,qrels=./data/msmarco-doctrain-qrels.tsv,trec=./data/trids_marco-doc-10.tsv \
+        -train queries=./data/msmarco-doctrain-queries.tsv,docs=./data/msmarco-docs-firstp.tsv,qrels=./data/msmarco-doctrain-qrels.tsv,trec=./data/bids_marco-doc_ance-firstp-10.tsv \
         -max_input 12800000 \
-        -save ./checkpoints/bert.bin \
-        -dev ./data/msmarco-doc.dev.jsonl \
+        -save ./checkpoints/bert-base-firstp.bin \
+        -dev ./data/msmarco-doc_dev_firstp-50.jsonl \
         -qrels ./data/msmarco-docdev-qrels.tsv \
         -vocab bert-base-uncased \
         -pretrain bert-base-uncased \
         -res ./results/bert.trec \
         -metric mrr_cut_100 \
-        -max_query_len 32 \
-        -max_doc_len 477 \
-        -epoch 3 \
+        -max_query_len 64 \
+        -max_doc_len 445 \
+        -epoch 1 \
         -batch_size 4 \
         -lr 3e-6 \
         -n_warmup_steps 100000 \
         -eval_every 10000
 ```
+
+After BERT finetuning, we choose the best checkpoint on dev dataset to generate BERT features.
+
+```
+CUDA_VISIBLE_DEVICES=0 \
+python gen_feature.py \
+        -task classification \
+        -model bert \
+        -max_input 12800000 \
+        -dev ./data/msmarco-doc_dev_firstp.jsonl \
+        -vocab bert-base-uncased \
+        -pretrain bert-base-uncased \
+        -checkpoint ./checkpoints/bert-base-firstp.bin \
+        -res ./features/bert-base_ance_dev_firstp_features \
+        -max_query_len 64 \
+        -max_doc_len 445 \
+        -batch_size 256
+```
+
+Then, we run Coor-Ascent on these features using RankLib to learned the weight of each feature.
+
+```
+java -jar LeToR/RankLib-2.1-patched.jar -train features/bert-base_ance_dev_firstp_features -ranker 4 -metric2t RR@100 -save checkpoints/f_firstp.ca
+```
+
+Finally, we can generate the features of eval dataset, and compute the ranking scores using the feature weights, which is the same as that in the *inference* section.
+
+
+### BERT MaxP
+
+We provide our training data (qid did label): [Training-Data-FirstP](https://thunlp.oss-cn-qingdao.aliyuncs.com/OpenMatch/MSMARCO/document_ranking/bids_marco-doc_ance-maxp-10.tsv.zip). 10 negative documents are randomly sampled for each training query from ANCE MaxP top-100 documents. Since the dev dataset is too large to evaluate every 10000 steps, we only evaluate the top-100 documents of the first 50 dev queries: *msmarco-doc_dev_maxp-50.jsonl*.
+
+Train.
+
+```
+CUDA_VISIBLE_DEVICES=0,1,2,3 \
+python train.py \
+        -task classification \
+        -model bert \
+        -train queries=./data/msmarco-doctrain-queries.tsv,docs=./data/msmarco-docs-maxp.tsv,qrels=./data/msmarco-doctrain-qrels.tsv,trec=./data/bids_marco-doc_ance-maxp-10.tsv \
+        -max_input 12800000 \
+        -save ./checkpoints/bert-base-maxp.bin \
+        -dev ./data/msmarco-doc_dev_maxp-50.jsonl \
+        -qrels ./data/msmarco-docdev-qrels.tsv \
+        -vocab bert-base-uncased \
+        -pretrain bert-base-uncased \
+        -res ./results/bert.trec \
+        -metric mrr_cut_100 \
+        -max_query_len 64 \
+        -max_doc_len 445 \
+        -maxp \
+        -epoch 1 \
+        -batch_size 8 \
+        -lr 2e-5 \
+        -n_warmup_steps 50000 \
+        -eval_every 10000
+```
+
+After BERT finetuning, we choose the best checkpoint on dev dataset to generate BERT features.
+
+```
+CUDA_VISIBLE_DEVICES=0 \
+python gen_feature.py \
+        -task classification \
+        -model bert \
+        -max_input 12800000 \
+        -dev ./data/msmarco-doc_dev_maxp.jsonl \
+        -vocab bert-base-uncased \
+        -pretrain bert-base-uncased \
+        -checkpoint ./checkpoints/bert-base-maxp.bin \
+        -res ./features/bert-base_ance_dev_maxp_features \
+        -max_query_len 64 \
+        -max_doc_len 445 \
+        -maxp \
+        -batch_size 64
+```
+
+Then, we run Coor-Ascent on these features using RankLib to learned the weight of each feature.
+
+```
+java -jar LeToR/RankLib-2.1-patched.jar -train features/bert-base_ance_dev_maxp_features -ranker 4 -metric2t RR@100 -save checkpoints/f_maxp.ca
+```
+
+Finally, we can generate the features of eval dataset, and compute the ranking scores using the feature weights, which is the same as that in the *inference* section.

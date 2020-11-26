@@ -1,8 +1,8 @@
 CUDA_VISIBLE_DEVICES=0 \
 python train.py \
-        -task ranking \
+        -task classification \
         -model bert \
-        -train ./data/train_toy.jsonl \
+        -train ./data/train_clas_toy.jsonl \
         -max_input 1280000 \
         -save ./checkpoints/bert.bin \
         -dev ./data/dev_toy.jsonl \

@@ -15,6 +15,7 @@ sh train.sh
 -task             'ranking': pair-wise, 'classification': query-doc.
 -model            'bert', 'tk', 'edrm', 'cknrm' or 'knrm'.
 -reinfoselect     use reinfoselect or not.
+-resset           reset the model or not, used in reinfoselect setting.
 -train            path to training dataset.
 -max_input        max input of instances.
 -save             path for saving model checkpoint.
@@ -23,14 +24,18 @@ sh train.sh
 -vocab            path to glove or customized vocab.
 -ent_vocab        path to entity vocab, for edrm.
 -pretrain         path to pretrained bert model.
+-checkpoint       path to checkpoint.
 -res              path for saving result.
 -metric           which metrics to use, e.g. ndcg_cut_10.
+-mode             use cls or pooling as bert representation.
 -n_kernels        kernel number, for tk, edrm, cknrm or knrm.
 -max_query_len    max length of query tokens.
 -max_doc_len      max length of document tokens.
+-maxp             bert max passage.
 -epoch            how many epoch.
 -batch_size       batch size.
 -lr               learning rate.
+-n_warmup_steps   warmup steps.
 -eval_every       e.g. 1000, every 1000 steps evaluate on dev data.
 ```
 

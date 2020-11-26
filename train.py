@@ -349,6 +349,7 @@ def main():
     parser.add_argument('-n_kernels', type=int, default=21)
     parser.add_argument('-max_query_len', type=int, default=20)
     parser.add_argument('-max_doc_len', type=int, default=150)
+    parser.add_argument('-maxp', action='store_true', default=False)
     parser.add_argument('-epoch', type=int, default=1)
     parser.add_argument('-batch_size', type=int, default=8)
     parser.add_argument('-lr', type=float, default=2e-5)

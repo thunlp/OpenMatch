@@ -149,14 +149,21 @@ unzip ./data/glove.6B.zip -d ./data
 
 \* [MS MARCO Passage Ranking](./docs/experiments-msmarco.md)
 
-  |Model|eval|dev|
-  |:---:|:--:|:-:|
-  |BERT Base|0.345|0.349|
-  |ELECTRA Base|0.344|0.352|
-  |RoBERTa Large|0.375|0.386|
-  |ELECTRA Large|0.376|0.388|
+  |Model|dev|eval|
+  |:---:|:-:|:--:|
+  |BERT Base|0.349|0.345|
+  |ELECTRA Base|0.352|0.344|
+  |RoBERTa Large|0.386|0.375|
+  |ELECTRA Large|0.388|0.376|
 
 \* [MS MARCO Document Ranking](./docs/experiments-msmarco-doc.md)
+
+  |Model|dev|eval|
+  |:---:|:-:|:--:|
+  |ANCE FirstP|0.373|0.334|
+  |ANCE MAxP|0.383|0.342|
+  |ANCE + BM25 + BERT Base FirstP|0.431|0.380|
+  |ANCE + BERT Base MaxP|0.432|0.391|
 
 ## Contribution
 Thanks to all the people who contributed to OpenMatch!

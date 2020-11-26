@@ -19,7 +19,7 @@ def main():
     else:
         with open(args.input_queries, 'r') as r:
             for line in r:
-                line = line.strip().split('\t')
+                line = line.strip('\n').split('\t')
                 qs[line[0]] = line[1]
 
     ds = {}
@@ -33,13 +33,9 @@ def main():
             for line in r:
                 line = line.strip('\n').split('\t')
                 if len(line) > 2:
-                    ds[line[0]] = line[-2] + ' ' + line[-1]
+                    ds[line[0]] = line[-2] + ' [SEP] ' + line[-1]
                 else:
-                    try:
-                        ds[line[0]] = line[1]
-                    except:
-                        print(line)
-                        exit()
+                    ds[line[0]] = line[1]
 
     if args.input_qrels is not None:
         qpls = {}
@@ -63,7 +59,7 @@ def main():
                     label = 0
                 f.write(json.dumps({'query': qs[line[0]], 'doc': ds[line[2]], 'label': label, 'query_id': line[0], 'doc_id': line[2], 'retrieval_score': float(line[4])}) + '\n')
             else:
-                f.write(json.dumps({'query': qs[line[0]], 'doc': ds[line[2]], 'query_id': line[0], 'doc_id': line[2], 'retrieval_score': float(line[4])}) + '\n')
+                f.write(json.dumps({'query': qs[line[0]], 'doc': ds[line[2]], 'label': -1, 'query_id': line[0], 'doc_id': line[2], 'retrieval_score': float(line[4])}) + '\n')
     f.close()
 
 if __name__ == "__main__":
