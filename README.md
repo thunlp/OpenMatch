@@ -135,35 +135,43 @@ wget http://nlp.stanford.edu/data/glove.6B.zip -P ./data
 unzip ./data/glove.6B.zip -d ./data
 ```
 
+\* Evaluation
+
+```
+metric = om.Metric()
+res = get_metric(qrels, ranking_list, 'ndcg_cut_20')
+res = get_mrr(qrels, ranking_list, 'mrr_cut_10')
+```
+
 ## Experiments
 \* [Ad-hoc Search](./docs/experiments-adhoc.md)
 
-  |Model|ClueWeb09|Robust04|ClueWeb12|
-  |:---:|:-------:|:------:|:-------:|
-  |KNRM|0.1880|0.3016|0.0968|
-  |Conv-KNRM|0.1894|0.2907|0.0896|
-  |EDRM|0.2015|0.2993|0.0937|
-  |TK|0.2306|0.2822|0.0966|
-  |BERT Base|0.2701|0.4168|0.1183|
-  |ELECTRA Base|0.2861|0.4668|0.1078|
+  |Retriever|Reranker|Coor-Ascent|ClueWeb09|Robust04|ClueWeb12|
+  |:-------:|:------:|:---------:|:-------:|:------:|:-------:|
+  |SDM|KNRM|-|0.1880|0.3016|0.0968|
+  |SDM|Conv-KNRM|-|0.1894|0.2907|0.0896|
+  |SDM|EDRM|-|0.2015|0.2993|0.0937|
+  |SDM|TK|-|0.2306|0.2822|0.0966|
+  |SDM|BERT Base|-|0.2701|0.4168|0.1183|
+  |SDM|ELECTRA Base|-|0.2861|0.4668|0.1078|
 
 \* [MS MARCO Passage Ranking](./docs/experiments-msmarco.md)
 
-  |Model|dev|eval|
-  |:---:|:-:|:--:|
-  |BERT Base|0.349|0.345|
-  |ELECTRA Base|0.352|0.344|
-  |RoBERTa Large|0.386|0.375|
-  |ELECTRA Large|0.388|0.376|
+  |Retriever|Reranker|Coor-Ascent|dev|eval|
+  |:-------:|:------:|:---------:|:-:|:--:|
+  |BM25|BERT Base|-|0.349|0.345|
+  |BM25|ELECTRA Base|-|0.352|0.344|
+  |BM25|RoBERTa Large|-|0.386|0.375|
+  |BM25|ELECTRA Large|-|0.388|0.376|
 
 \* [MS MARCO Document Ranking](./docs/experiments-msmarco-doc.md)
 
-  |Model|dev|eval|
-  |:---:|:-:|:--:|
-  |ANCE FirstP|0.373|0.334|
-  |ANCE MAxP|0.383|0.342|
-  |ANCE + BM25 + BERT Base FirstP|0.431|0.380|
-  |ANCE + BERT Base MaxP|0.432|0.391|
+  |Retriever|Reranker|Coor-Ascent|dev|eval|
+  |:-------:|:------:|:---------:|:-:|:--:|
+  |ANCE FirstP|-|-|0.373|0.334|
+  |ANCE MaxP|-|-|0.383|0.342|
+  |ANCE FirstP+BM25|BERT Base FirstP|+|0.431|0.380|
+  |ANCE MaxP|BERT Base MaxP|+|0.432|0.391|
 
 ## Contribution
 Thanks to all the people who contributed to OpenMatch!

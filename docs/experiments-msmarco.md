@@ -95,7 +95,7 @@ tar -zxvf ./data/triples.train.small.tar.gz -C ./data/
 
 For eval dataset inference, just change the trec file to *./data/run.msmarco-passage.eval.small.trec*. The top1000 trec files for dev and eval queries are generated following [anserini](https://github.com/castorini/anserini/blob/master/docs/experiments-msmarco-passage.md).
 
-## train
+## Training
 
 Train.
 

@@ -1,6 +1,24 @@
 # MS MARCO Document Ranking
 First, get the official data from [MSMARCO-Document-Ranking](https://github.com/microsoft/MSMARCO-Document-Ranking). For BERT FirstP, we concatenate the title and content of each document by a '[SEP]'. For BERT MaxP, we only use the content of each document. To reproduce our runs, we need to preprocess the official document file to the format: *doc_id \t doc*.
 
+|Type|File|Records|Format|Description|
+|:---|:---|:------|:-----|:----------|
+|Corpus|[msmarco-docs.tsv](https://msmarco.blob.core.windows.net/msmarcoranking/msmarco-docs.tsv.gz)|3,213,835|tsv: docid, url, title, body|Document Collections|
+|Train|[msmarco-doctrain-queries.tsv](https://msmarco.blob.core.windows.net/msmarcoranking/msmarco-doctrain-queries.tsv.gz)|367,013|tsv: qid, query|Training Queries|
+|Train|[msmarco-doctrain-qrels.tsv](https://msmarco.blob.core.windows.net/msmarcoranking/msmarco-doctrain-qrels.tsv.gz)|384,597|TREC qrels|Training Query-Doc Relevance Labels|
+|Train|[Training-Data-FirstP](https://thunlp.oss-cn-qingdao.aliyuncs.com/OpenMatch/MSMARCO/document_ranking/bids_marco-doc_ance-firstp-10.tsv.zip)|7,340,240|tsv: qid, docid, label|ANCE FirstP training data|
+|Train|[Training-Data-MaxP](https://thunlp.oss-cn-qingdao.aliyuncs.com/OpenMatch/MSMARCO/document_ranking/bids_marco-doc_ance-maxp-10.tsv.zip)|7,340,240|tsv: qid, docid, label|ANCE MaxP training data|
+|Dev|[msmarco-docdev-queries.tsv](https://msmarco.blob.core.windows.net/msmarcoranking/msmarco-docdev-queries.tsv.gz)|5,193|tsv: qid, query|Dev Queries|
+|Dev|[msmarco-docdev-qrels.tsv](https://msmarco.blob.core.windows.net/msmarcoranking/msmarco-docdev-qrels.tsv.gz)|5,478|TREC qrels|Dev Query-Doc Relevance Labels|
+|Dev|[ANCE-FirstP-dev-top100](https://thunlp.oss-cn-qingdao.aliyuncs.com/OpenMatch/MSMARCO/document_ranking/ANCE_FirstP_dev.trec.zip)|519,300|TREC submission|ANCE FirstP dev top100|
+|Dev|[ANCE-MaxP-dev-top100]((https://thunlp.oss-cn-qingdao.aliyuncs.com/OpenMatch/MSMARCO/document_ranking/ANCE_MaxP_dev.trec.zip))|519,300|TREC submission|ANCE MaxP dev top100|
+|Test|[docleaderboard-queries.tsv](https://msmarco.blob.core.windows.net/msmarcoranking/docleaderboard-queries.tsv.gz)|5,793|tsv: qid, query|Test Queries|
+|Test|[ANCE-FirstP-eval-top100](https://thunlp.oss-cn-qingdao.aliyuncs.com/OpenMatch/MSMARCO/document_ranking/ANCE_FirstP_eval.trec.zip)|579,300|TREC submission|ANCE FirstP eval top100|
+|Test|[ANCE-MaxP-eval-top100](https://thunlp.oss-cn-qingdao.aliyuncs.com/OpenMatch/MSMARCO/document_ranking/ANCE_MaxP_eval.trec.zip)|579,300|TREC submission|ANCE MaxP eval top100|
+|Model|[BERT-Base-ANCE-FirstP](https://thunlp.oss-cn-qingdao.aliyuncs.com/OpenMatch/MSMARCO/document_ranking/bert-base_ance_firstp.bin.zip)|-|-|BERT Base ANCE FirstP checkpoint|
+|Model|[BERT-Base-ANCE-MaxP](https://thunlp.oss-cn-qingdao.aliyuncs.com/OpenMatch/MSMARCO/document_ranking/bert-base_ance_maxp.bin.zip)|-|-|BERT Base ANCE MaxP checkpoint|
+|Model|[F-MaxP](https://thunlp.oss-cn-qingdao.aliyuncs.com/OpenMatch/MSMARCO/document_ranking/f_maxp.ca)|-|-|BERT Base ANCE MaxP Coor-Ascent weights|
+
 ## Inference
 
 ### BERT FirstP
@@ -79,14 +97,14 @@ python gen_feature.py \
         -batch_size 64
 ```
 
-Then, we compute the ranking score using the weights.
+Then, we compute the ranking score using the weights. 
 
 ```
 java -jar LeToR/RankLib-2.1-patched.jar -load checkpoints/f_maxp.ca -rank features/bert-base_ance_eval_maxp_features -score f0.score
 python LeToR/gen_trec.py -dev data/msmarco-doc_eval_maxp.jsonl -res results/bert-base_ance_eval_maxp_ca.trec -k -1
 ```
 
-## train
+## Training
 
 You can also finetune BERT yourself instead of using our checkpoints.
 
@@ -146,7 +164,7 @@ Finally, we can generate the features of eval dataset, and compute the ranking s
 
 ### BERT MaxP
 
-We provide our training data (qid did label): [Training-Data-FirstP](https://thunlp.oss-cn-qingdao.aliyuncs.com/OpenMatch/MSMARCO/document_ranking/bids_marco-doc_ance-maxp-10.tsv.zip). 10 negative documents are randomly sampled for each training query from ANCE MaxP top-100 documents. Since the dev dataset is too large to evaluate every 10000 steps, we only evaluate the top-100 documents of the first 50 dev queries: *msmarco-doc_dev_maxp-50.jsonl*.
+We provde our training data (qid did label): [Training-Data-MaxP](https://thunlp.oss-cn-qingdao.aliyuncs.com/OpenMatch/MSMARCO/document_ranking/bids_marco-doc_ance-maxp-10.tsv.zip). 10 negative documents are randomly sampled for each training query from ANCE MaxP top-100 documents. Since the dev dataset is too large to evaluate every 10000 steps, we only evaluate the top-100 documents of the first 50 dev queries: *msmarco-doc_dev_maxp-50.jsonl*.
 
 Train.
 
