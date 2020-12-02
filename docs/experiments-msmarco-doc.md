@@ -11,7 +11,7 @@ First, get the official data from [MSMARCO-Document-Ranking](https://github.com/
 |Dev|[msmarco-docdev-queries.tsv](https://msmarco.blob.core.windows.net/msmarcoranking/msmarco-docdev-queries.tsv.gz)|5,193|tsv: qid, query|Dev Queries|
 |Dev|[msmarco-docdev-qrels.tsv](https://msmarco.blob.core.windows.net/msmarcoranking/msmarco-docdev-qrels.tsv.gz)|5,478|TREC qrels|Dev Query-Doc Relevance Labels|
 |Dev|[ANCE-FirstP-dev-top100](https://thunlp.oss-cn-qingdao.aliyuncs.com/OpenMatch/MSMARCO/document_ranking/ANCE_FirstP_dev.trec.zip)|519,300|TREC submission|ANCE FirstP dev top100|
-|Dev|[ANCE-MaxP-dev-top100]((https://thunlp.oss-cn-qingdao.aliyuncs.com/OpenMatch/MSMARCO/document_ranking/ANCE_MaxP_dev.trec.zip))|519,300|TREC submission|ANCE MaxP dev top100|
+|Dev|[ANCE-MaxP-dev-top100](https://thunlp.oss-cn-qingdao.aliyuncs.com/OpenMatch/MSMARCO/document_ranking/ANCE_MaxP_dev.trec.zip)|519,300|TREC submission|ANCE MaxP dev top100|
 |Test|[docleaderboard-queries.tsv](https://msmarco.blob.core.windows.net/msmarcoranking/docleaderboard-queries.tsv.gz)|5,793|tsv: qid, query|Test Queries|
 |Test|[ANCE-FirstP-eval-top100](https://thunlp.oss-cn-qingdao.aliyuncs.com/OpenMatch/MSMARCO/document_ranking/ANCE_FirstP_eval.trec.zip)|579,300|TREC submission|ANCE FirstP eval top100|
 |Test|[ANCE-MaxP-eval-top100](https://thunlp.oss-cn-qingdao.aliyuncs.com/OpenMatch/MSMARCO/document_ranking/ANCE_MaxP_eval.trec.zip)|579,300|TREC submission|ANCE MaxP eval top100|
