@@ -139,8 +139,8 @@ unzip ./data/glove.6B.zip -d ./data
 
 ```
 metric = om.Metric()
-res = get_metric(qrels, ranking_list, 'ndcg_cut_20')
-res = get_mrr(qrels, ranking_list, 'mrr_cut_10')
+res = metric.get_metric(qrels, ranking_list, 'ndcg_cut_20')
+res = metric.get_mrr(qrels, ranking_list, 'mrr_cut_10')
 ```
 
 ## Experiments
