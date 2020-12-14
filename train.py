@@ -95,7 +95,7 @@ def train_reinfoselect(args, model, policy, loss_fn, m_optim, m_scheduler, p_opt
             m = Categorical(batch_probs)
             action = m.sample()
             if action.sum().item() < 1:
-                m_scheduler.step()
+                #m_scheduler.step()
                 if (step+1) % args.eval_every == 0 and len(log_prob_ps) > 0:
                     with torch.no_grad():
                         rst_dict = dev(args, model, metric, dev_loader, device)
@@ -188,10 +188,11 @@ def train_reinfoselect(args, model, policy, loss_fn, m_optim, m_scheduler, p_opt
                 else:
                     raise ValueError('Task must be `ranking` or `classification`.')
 
+            mask = action.ge(0.5)
             log_prob_p = m.log_prob(action)
             log_prob_n = m.log_prob(1-action)
-            log_prob_ps.append(log_prob_p)
-            log_prob_ns.append(log_prob_n)
+            log_prob_ps.append(torch.masked_select(log_prob_p, mask))
+            log_prob_ns.append(torch.masked_select(log_prob_n, mask))
 
             if args.task == 'ranking':
                 batch_loss = loss_fn(batch_score_pos.tanh(), batch_score_neg.tanh(), torch.ones(batch_score_pos.size()).to(device))
