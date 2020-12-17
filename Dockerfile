@@ -16,7 +16,7 @@ ENV LD_LIBRARY_PATH "$CUDA_HOME/lib64:$CUDA_HOME/extras/CUPTI/lib64:$LD_LIBRARY_
 ENV CFLAGS "-I$CUDA_HOME/include $CFLAGS"
 
 # warning: no torch and torchvision in the requirements, need to install in advance
-RUN wget https://raw.githubusercontent.com/EDLMM/image_host/master/tmp/venv_ANCE.requirements
+RUN wget https://raw.githubusercontent.com/thunlp/OpenMatch/master/retrievers/venv_ANCE.requirements
 RUN pip install -r venv_ANCE.requirements
 RUN pip install tensorflow
 
