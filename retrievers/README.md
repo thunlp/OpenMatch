@@ -11,5 +11,7 @@ Search by BM25:
 ./bm25_retriever/bin/SearchCollection -index {index path} -topicreader {topic format} -topics {topic path} -bm25 -output {result file path}
 ```
 
+Note that *topic* is the user queries, anserini supports various format, for example, *TsvString* for queries in tsv format: *qid \t query* for each line.
+
 ## Data Format
 BM25 accept *jsonl* format, each line is like this: *{'id': str, 'contents': str}*. Detailed examples are available [here](https://github.com/castorini/anserini).
