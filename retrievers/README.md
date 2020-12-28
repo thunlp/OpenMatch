@@ -1,17 +1,15 @@
 # Document Retrieval
 BM25 is following [anserini](https://github.com/castorini/anserini), and ANN is following [ANCE](https://github.com/microsoft/ANCE).
 
-## Run
-Build BM25 index:
+## BM25 Guide
+### Reproduce MS MARCO Doc Ranking
+First, get the [msmarco-docs.tsv](https://msmarco.blob.core.windows.net/msmarcoranking/msmarco-docs.tsv.gz) and [msmarco-docdev-queries.tsv](https://msmarco.blob.core.windows.net/msmarcoranking/msmarco-docdev-queries.tsv.gz), and preprocess it to jsonl format. *{'id': doc_id, 'contents': doc}* for each line, save it to *collections/msmarco/msmarco-docs.jsonl*.
+
+Then build BM25 index and search:
 ```
-./bm25_retriever/bin/IndexCollection -collection JsonCollection -input {your collection} -index {index path} -generator LuceneDocumentGenerator -threads 8 -storePositions -storeDocvectors -storeRawDocs >& {log file path}
-```
-Search by BM25:
-```
-./bm25_retriever/bin/SearchCollection -index {index path} -topicreader {topic format} -topics {topic path} -bm25 -output {result file path}
+./bm25_retriever/bin/IndexCollection -collection JsonCollection -input ./collections/msmarco -index index-msmarco -generator LuceneDocumentGenerator -threads 8 -storePositions -storeDocvectors -storeRawDocs
+./bm25_retriever/bin/SearchCollection -index index-msmarco -topicreader TsvString -topics msmarco-docdev-queries.tsv -bm25 -output msmarco-doc.txt
 ```
 
-Note that *topic* is the user queries, anserini supports various format, for example, *TsvString* for queries in tsv format: *qid \t query* for each line.
-
-## Data Format
-BM25 accept *jsonl* format, each line is like this: *{'id': str, 'contents': str}*. Detailed examples are available [here](https://github.com/castorini/anserini).
+## ANCE Guide
+The guides of ANCE training and inference are available at [ance](./openmatch_ance_retriver_readme.md).
