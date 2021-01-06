@@ -27,7 +27,7 @@ def main():
         with open(args.input_docs, 'r') as r:
             for line in r:
                 line = json.loads(line)
-                ds[line['doc_id']] = ' '.join([line['title'], line['abstract']]).replace('\n', ' ').replace('\t', ' ').strip()
+                ds[line['doc_id']] = line['doc'].strip()
     else:
         with open(args.input_docs, 'r') as r:
             for line in r:
