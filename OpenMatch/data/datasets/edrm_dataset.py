@@ -39,7 +39,17 @@ class EDRMDataset(Dataset):
                 for i, line in enumerate(f):
                     if i >= self._max_input:
                         break
-                    line = json.loads(line)
+                    if self._dataset.split('.')[-1] == 'json' or self._dataset.split('.')[-1] == 'jsonl':
+                        line = json.loads(line)
+                    else:
+                        if self._task == 'ranking':
+                            query, doc_pos, doc_neg = line.strip('\n').split('\t')
+                            line = {'query': query, 'doc_pos': doc_pos, 'doc_neg': doc_neg}
+                        elif self._task == 'classification':
+                            query, doc, label = line.strip('\n').split('\t')
+                            line = {'query': query, 'doc': doc, 'label': int(label)}
+                        else:
+                            raise ValueError('Task must be `ranking` or `classification`.')
                     self._examples.append(line)
         elif isinstance(self._dataset, dict):
             self._id = True
