@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 install_requires = [
     'torch==1.4.0',
-    'transformers==2.3.0',
+    'transformers==2.8.0',
     'faiss-cpu==1.6.3',
     'nltk==3.5',
     'pytrec_eval==0.4'
