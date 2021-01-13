@@ -36,7 +36,7 @@ class BertMaxPDataset(Dataset):
                 for i, line in enumerate(f):
                     if i >= self._max_input:
                         break
-                    if self._dataset.split('.')[-1] == 'json' or self._dataset.split('.')[-1] == 'jsonl':
+                    if self._mode != 'train' or self._dataset.split('.')[-1] == 'json' or self._dataset.split('.')[-1] == 'jsonl':
                         line = json.loads(line)
                     else:
                         if self._task == 'ranking':
