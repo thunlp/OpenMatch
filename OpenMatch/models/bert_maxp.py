@@ -40,12 +40,12 @@ class BertMaxP(nn.Module):
         num = input_ids.size()[0]
         output = self._model(input_ids.view(num*4, self._max_query_len+self._max_doc_len+3), attention_mask = input_mask.view(num*4, self._max_query_len+self._max_doc_len+3), token_type_ids = segment_ids.view(num*4, self._max_query_len+self._max_doc_len+3))
 
-        logits = output[0][:, 0, :].view(num,4,-1).max(dim=1)[0]
-        logits = self._activation(self._dense1(logits))
         if self._mode == 'cls':
-            score = self._dense2(logits).squeeze(-1)
+            logits = output[0][:, 0, :].view(num,4,-1).max(dim=1)[0]
         elif self._mode == 'pooling':
-            score = self._dense2(logits).squeeze(-1)
+            logits = output[1].view(num,4,-1).max(dim=1)[0]
         else:
             raise ValueError('Mode must be `cls` or `pooling`.')
+        logits = self._activation(self._dense1(logits))
+        score = self._dense2(logits).squeeze(-1)
         return score, logits
