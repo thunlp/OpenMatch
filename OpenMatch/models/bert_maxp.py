@@ -23,6 +23,9 @@ class BertMaxP(nn.Module):
 
         self._config = AutoConfig.from_pretrained(self._pretrained)
         self._model = AutoModel.from_pretrained(self._pretrained, config=self._config)
+        for p in self.parameters():
+            p.requires_grad=False
+
         self._dense1 = nn.Linear(self._config.hidden_size, 128)
         self._activation = nn.ReLU()
 
@@ -36,12 +39,13 @@ class BertMaxP(nn.Module):
     def forward(self, input_ids: torch.Tensor, input_mask: torch.Tensor = None, segment_ids: torch.Tensor = None) -> Tuple[torch.Tensor, torch.Tensor]:
         num = input_ids.size()[0]
         output = self._model(input_ids.view(num*4, self._max_query_len+self._max_doc_len+3), attention_mask = input_mask.view(num*4, self._max_query_len+self._max_doc_len+3), token_type_ids = segment_ids.view(num*4, self._max_query_len+self._max_doc_len+3))
+
+        logits = output[0][:, 0, :].view(num,4,-1).max(dim=1)[0]
+        logits = self._activation(self._dense1(logits))
         if self._mode == 'cls':
-            logits = output[0][:, 0, :]
+            score = self._dense2(logits).squeeze(-1)
         elif self._mode == 'pooling':
-            logits = output[1]
+            score = self._dense2(logits).squeeze(-1)
         else:
             raise ValueError('Mode must be `cls` or `pooling`.')
-        
-        logits = self._activation(self._dense1(logits.view(num,4,-1).max(dim=1)[0]))
         return score, logits
