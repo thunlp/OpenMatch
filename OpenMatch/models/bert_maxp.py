@@ -23,8 +23,6 @@ class BertMaxP(nn.Module):
 
         self._config = AutoConfig.from_pretrained(self._pretrained)
         self._model = AutoModel.from_pretrained(self._pretrained, config=self._config)
-        for p in self.parameters():
-            p.requires_grad=False
 
         self._dense1 = nn.Linear(self._config.hidden_size, 128)
         self._activation = nn.ReLU()
