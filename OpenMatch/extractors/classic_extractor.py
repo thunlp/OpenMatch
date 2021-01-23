@@ -8,7 +8,7 @@ from scipy import spatial
 from nltk.corpus import stopwords
 from scipy.linalg import norm
 
-class Extractor():
+class ClassicExtractor():
     # classical feature extractor
     def __init__(self, query_terms, doc_terms, df, total_df=None, avg_doc_len=None):
         """
