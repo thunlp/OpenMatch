@@ -173,6 +173,70 @@ res = metric.get_mrr(qrels, ranking_list, 'mrr_cut_10')
   |ANCE FirstP+BM25|BERT Base FirstP|+|0.431|0.380|
   |ANCE MaxP|BERT Base MaxP|+|0.432|0.391|
 
+\* [Classic Features](./docs/experiments-classic.md)
+
+  <table>
+      <tr>
+          <td rowspan="2">Methods</td>
+          <td colspan="2">ClueWeb09-B</td>
+          <td colspan="2">Robust04</td>
+          <td colspan="2">TREC-COVID</td>
+    </tr>
+      <tr>
+          <td>NDCG@20</td>
+          <td>ERR@20</td>
+          <td>NDCG@20</td>
+          <td>ERR@20</td>
+          <td>NDCG@20</td>
+          <td>P@20</td>
+    </tr>
+      <tr>
+          <td>BM25 (Anserini)</td>
+          <td>0.2773</td>
+          <td>0.1426</td>
+          <td>0.4129</td>
+          <td>0.1117</td>
+          <td>0.6979</td>
+          <td>0.7670</td>
+      </tr>
+      <tr>
+          <td>RankSVM (Dai et al.)</td>
+          <td>0.289</td>
+          <td>n.a.</td>
+          <td>0.420</td>
+          <td>n.a.</td>
+          <td>n.a.</td>
+          <td>n.a.</td>
+      </tr>
+      <tr>
+          <td>RankSVM (OpenMatch)</td>
+          <td>0.2825</td>
+          <td>0.1476</td>
+          <td>0.4309</td>
+          <td>0.1173</td>
+          <td>0.6995</td>
+          <td>0.7570</td>
+      </tr>
+      <tr>
+          <td>Coor-Ascent (Dai et al.)</td>
+          <td>0.295</td>
+          <td>n.a.</td>
+          <td>0.427</td>
+          <td>n.a.</td>
+          <td>n.a.</td>
+          <td>n.a.</td>
+      </tr>
+      <tr>
+          <td>Coor-Ascent (OpenMatch)</td>
+          <td>0.2969</td>
+          <td>0.1581</td>
+          <td>0.4340</td>
+          <td>0.1171</td>
+          <td>0.7041</td>
+          <td>0.7770</td>
+      </tr>
+  </table>
+
 ## Contribution
 Thanks to all the people who contributed to OpenMatch!
 
