@@ -144,118 +144,39 @@ class ClassicExtractor():
         normed_idf = np.log(1 + self.total_df / np.maximum(self.query_df, 1))
         normed_tf = self.doc_tf / self.doc_len
         return normed_idf.dot(normed_tf)
+    
+class Corpus():
+    # corpus processor
+    def __init__(self, docs):
+        """
+        :param docs: doc dict -> docs[docid] = doc
+        """
+        self.regex_drop_char = re.compile('[^a-z0-9\s]+')
+        self.regex_multi_space = re.compile('\s+')
+        self.stop_words = set(stopwords.words('english'))
 
-regex_drop_char = re.compile('[^a-z0-9\s]+')
-regex_multi_space = re.compile('\s+')
-stop_words = set(stopwords.words('english'))
+    def text2lm(self, text):
+        tokens = self.regex_multi_space.sub(' ', self.regex_drop_char.sub(' ', text.lower())).strip().split()
+        text_len = len(tokens)
+        d = {}
+        for token in tokens:
+            if token not in d:
+                d[token] = 0
+            d[token] += 1
+        return d, text_len
 
-def text2lm(text):
-    tokens = regex_multi_space.sub(' ', regex_drop_char.sub(' ', text.lower())).strip().split()
-    text_len = len(tokens)
-    d = {}
-    for token in tokens:
-        if token not in d:
-            d[token] = 0
-        d[token] += 1
-    return d, text_len
-
-def cnt_corpus(docs):
-    docs_terms = {}
-    df = {}
-    total_df = len(docs)
-    total_doc_len = 0
-    for doc in docs:
-        doc_terms, doc_len = text2lm(docs[doc])
-        docs_terms[doc] = doc_terms
-        for item in doc_terms:
-            if item not in df:
-                df[item] = 0
-            df[item] += 1
-        total_doc_len += doc_len
-    avg_doc_len = total_doc_len / total_df
-    return docs_terms, df, total_df, avg_doc_len
-
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-input_trec', type=str)
-    parser.add_argument('-input_qrels', type=str, default=None)
-    parser.add_argument('-input_queries', type=str)
-    parser.add_argument('-input_docs', type=str)
-    parser.add_argument('-output', type=str)
-    args = parser.parse_args()
-
-    qs = {}
-    if args.input_queries.split('.')[-1] == 'json' or args.input_queries.split('.')[-1] == 'jsonl':
-        with open(args.input_queries, 'r') as r:
-            for line in r:
-                line = json.loads(line)
-                qs[line['query_id']] = line['query']
-    else:
-        with open(args.input_queries, 'r') as r:
-            for line in r:
-                line = line.strip().split('\t')
-                qs[line[0]] = line[1]
-
-    ds = {}
-    if args.input_queries.split('.')[-1] == 'json' or args.input_queries.split('.')[-1] == 'jsonl':
-        with open(args.input_docs, 'r') as r:
-            for line in r:
-                line = json.loads(line)
-                ds[line['doc_id']] = line['doc'].strip()
-    else:
-        with open(args.input_docs, 'r') as r:
-            for line in r:
-                line = line.strip('\n').split('\t')
-                if len(line) > 2:
-                    ds[line[0]] = line[-2] + ' ' + line[-1]
-                else:
-                    try:
-                        ds[line[0]] = line[1]
-                    except:
-                        print(line)
-                        exit()
-
-    if args.input_qrels is not None:
-        qpls = {}
-        with open(args.input_qrels, 'r') as r:
-            for line in r:
-                line = line.strip().split()
-                if line[0] not in qpls:
-                    qpls[line[0]] = {}
-                qpls[line[0]][line[2]] = int(line[3])
-
-    docs_terms, df, total_df, avg_doc_len = cnt_corpus(ds)
-    f = open(args.output, 'w')
-    with open(args.input_trec, 'r') as r:
-        for line in r:
-            line = line.strip().split()
-            if line[0] not in qs or line[2] not in ds:
-                continue
-            label = -1
-            if args.input_qrels is not None:
-                if line[0] in qpls and line[2] in qpls[line[0]]:
-                    label = qpls[line[0]][line[2]]
-                else:
-                    label = 0
-            query_terms, query_len = text2lm(qs[line[0]])
-            extractor = Extractor(query_terms, docs_terms[line[2]], df, total_df, avg_doc_len)
-            features = extractor.get_feature()
-
-            res = []
-            res.append(str(label))
-            res.append('id:' + line[0])
-            res.append(str(1) + ':' + str(features['lm']))
-            res.append(str(2) + ':' + str(features['lm_dir']))
-            res.append(str(3) + ':' + str(features['lm_jm']))
-            res.append(str(4) + ':' + str(features['lm_twoway']))
-            res.append(str(5) + ':' + str(features['bm25']))
-            res.append(str(6) + ':' + str(features['coordinate']))
-            res.append(str(7) + ':' + str(features['cosine']))
-            res.append(str(8) + ':' + str(features['tf_idf']))
-            res.append(str(9) + ':' + str(features['bool_and']))
-            res.append(str(10) + ':' + str(features['bool_or']))
-            f.write(' '.join(res) + '\n')
-    f.close()
-
-if __name__ == "__main__":
-    main()
+    def cnt_corpus(self, docs):
+        docs_terms = {}
+        df = {}
+        total_df = len(docs)
+        total_doc_len = 0
+        for doc in docs:
+            doc_terms, doc_len = self.text2lm(docs[doc])
+            docs_terms[doc] = doc_terms
+            for item in doc_terms:
+                if item not in df:
+                    df[item] = 0
+                df[item] += 1
+            total_doc_len += doc_len
+        avg_doc_len = total_doc_len / total_df
+        return docs_terms, df, total_df, avg_doc_len
