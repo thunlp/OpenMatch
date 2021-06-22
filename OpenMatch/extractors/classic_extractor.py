@@ -154,6 +154,8 @@ class Corpus():
         self.regex_drop_char = re.compile('[^a-z0-9\s]+')
         self.regex_multi_space = re.compile('\s+')
         self.stop_words = set(stopwords.words('english'))
+        
+        self.docs = docs
 
     def text2lm(self, text):
         tokens = self.regex_multi_space.sub(' ', self.regex_drop_char.sub(' ', text.lower())).strip().split()
@@ -165,13 +167,13 @@ class Corpus():
             d[token] += 1
         return d, text_len
 
-    def cnt_corpus(self, docs):
+    def cnt_corpus(self):
         docs_terms = {}
         df = {}
-        total_df = len(docs)
+        total_df = len(self.docs)
         total_doc_len = 0
         for doc in docs:
-            doc_terms, doc_len = self.text2lm(docs[doc])
+            doc_terms, doc_len = self.text2lm(self.docs[doc])
             docs_terms[doc] = doc_terms
             for item in doc_terms:
                 if item not in df:
