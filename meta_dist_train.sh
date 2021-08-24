@@ -18,7 +18,7 @@ CUDA_VISIBLE_DEVICES=0,1,2,3 OMP_NUM_THREADS=1 python -u -m torch.distributed.la
 -max_input 12800000 \
 -train queries=$DATA_DIR/queries.train.tsv,docs=$DATA_DIR/collection.tsv,qrels=$DATA_DIR/qrels.train.tsv,trec=$DATA_DIR/trids_bm25_marco-10.tsv \
 -dev queries=$DATA_DIR/queries.dev.small.tsv,docs=$DATA_DIR/collection.tsv,qrels=$DATA_DIR/qrels.dev.small.tsv,trec=$DATA_DIR/run.msmarco-passage.dev.small.100.trec \
--target trec=$DATA_DIR/target.small.trec \
+-target trec=$DATA_DIR/devids_bm25_marco.tsv \
 -qrels $DATA_DIR/qrels.dev.small.tsv \
 -vocab bert-base-uncased \
 -pretrain bert-base-uncased \
