@@ -16,7 +16,8 @@ class RobertaDataset(Dataset):
         query_max_len: int = 32,
         doc_max_len: int = 256,
         max_input: int = 1280000,
-        task: str = 'ranking'
+        task: str = 'ranking',
+        template: str = None,
     ) -> None:
         self._dataset = dataset
         self._tokenizer = tokenizer
@@ -28,6 +29,10 @@ class RobertaDataset(Dataset):
         self._task = task
         if self._seq_max_len > 512:
             raise ValueError('query_max_len + doc_max_len + 4 > 512.')
+        
+        if self._task.startswith("prompt"):
+            assert template is not None
+            self._template = template
 
         if isinstance(self._dataset, str):
             self._id = False
@@ -115,33 +120,69 @@ class RobertaDataset(Dataset):
                         'input_ids_neg': input_ids_neg, 'input_mask_neg': input_mask_neg}
             elif self._task == 'classification':
                 input_ids = torch.tensor([item['input_ids'] for item in batch])
-                input_mask = torch.tensor([item['input_mask'] for item in batch])
+                input_mask = torch.tensor([item['attention_mask'] for item in batch])
                 label = torch.tensor([item['label'] for item in batch])
                 return {'input_ids': input_ids, 'input_mask': input_mask, 'label': label}
+            elif self._task == "prompt_ranking":
+                input_ids_pos = torch.tensor([item['input_ids_pos'] for item in batch])
+                input_mask_pos = torch.tensor([item['input_mask_pos'] for item in batch])
+                mask_pos_pos = torch.tensor([item['mask_pos_pos'] for item in batch])
+                input_ids_neg = torch.tensor([item['input_ids_neg'] for item in batch])
+                input_mask_neg = torch.tensor([item['input_mask_neg'] for item in batch])
+                mask_pos_neg = torch.tensor([item['mask_pos_neg'] for item in batch])
+                return {'input_ids_pos': input_ids_pos, 'input_mask_pos': input_mask_pos, "mask_pos_pos": mask_pos_pos, 
+                        'input_ids_neg': input_ids_neg, 'input_mask_neg': input_mask_neg, "mask_pos_neg": mask_pos_neg}
+            elif self._task == "prompt_classification":
+                input_ids = torch.tensor([item['input_ids'] for item in batch])
+                mask_pos = torch.tensor([item['mask_pos'] for item in batch])
+                input_mask = torch.tensor([item['attention_mask'] for item in batch])
+                label = torch.tensor([item['label'] for item in batch])
+                return {'input_ids': input_ids, 'input_mask': input_mask, "mask_pos": mask_pos, 'label': label}
             else:
                 raise ValueError('Task must be `ranking` or `classification`.')
         elif self._mode == 'dev':
-            query_id = [item['query_id'] for item in batch]
-            doc_id = [item['doc_id'] for item in batch]
-            label = [item['label'] for item in batch]
-            retrieval_score = torch.tensor([item['retrieval_score'] for item in batch])
-            input_ids = torch.tensor([item['input_ids'] for item in batch])
-            input_mask = torch.tensor([item['input_mask'] for item in batch])
-            return {'query_id': query_id, 'doc_id': doc_id, 'label': label, 'retrieval_score': retrieval_score,
-                    'input_ids': input_ids, 'input_mask': input_mask}
+            if self._task.startswith("prompt"):
+                query_id = [item['query_id'] for item in batch]
+                doc_id = [item['doc_id'] for item in batch]
+                label = [item['label'] for item in batch]
+                mask_pos = torch.tensor([item["mask_pos"] for item in batch])
+                retrieval_score = torch.tensor([item['retrieval_score'] for item in batch])
+                input_ids = torch.tensor([item['input_ids'] for item in batch])
+                input_mask = torch.tensor([item['attention_mask'] for item in batch])
+                return {'query_id': query_id, 'doc_id': doc_id, 'label': label, 'retrieval_score': retrieval_score, "mask_pos": mask_pos, 
+                        'input_ids': input_ids, 'input_mask': input_mask}
+            else:
+                query_id = [item['query_id'] for item in batch]
+                doc_id = [item['doc_id'] for item in batch]
+                label = [item['label'] for item in batch]
+                retrieval_score = torch.tensor([item['retrieval_score'] for item in batch])
+                input_ids = torch.tensor([item['input_ids'] for item in batch])
+                input_mask = torch.tensor([item['attention_mask'] for item in batch])
+                return {'query_id': query_id, 'doc_id': doc_id, 'label': label, 'retrieval_score': retrieval_score,
+                        'input_ids': input_ids, 'input_mask': input_mask}
         elif self._mode == 'test':
-            query_id = [item['query_id'] for item in batch]
-            doc_id = [item['doc_id'] for item in batch]
-            retrieval_score = torch.tensor([item['retrieval_score'] for item in batch])
-            input_ids = torch.tensor([item['input_ids'] for item in batch])
-            input_mask = torch.tensor([item['input_mask'] for item in batch])
-            return {'query_id': query_id, 'doc_id': doc_id, 'retrieval_score': retrieval_score,
-                    'input_ids': input_ids, 'input_mask': input_mask}
+            if self._task.startswith("prompt"):
+                query_id = [item['query_id'] for item in batch]
+                doc_id = [item['doc_id'] for item in batch]
+                mask_pos = torch.tensor([item["mask_pos"] for item in batch])
+                retrieval_score = torch.tensor([item['retrieval_score'] for item in batch])
+                input_ids = torch.tensor([item['input_ids'] for item in batch])
+                input_mask = torch.tensor([item['attention_mask'] for item in batch])
+                return {'query_id': query_id, 'doc_id': doc_id, 'retrieval_score': retrieval_score, "mask_pos": mask_pos, 
+                        'input_ids': input_ids, 'input_mask': input_mask}
+            else:
+                query_id = [item['query_id'] for item in batch]
+                doc_id = [item['doc_id'] for item in batch]
+                retrieval_score = torch.tensor([item['retrieval_score'] for item in batch])
+                input_ids = torch.tensor([item['input_ids'] for item in batch])
+                input_mask = torch.tensor([item['attention_mask'] for item in batch])
+                return {'query_id': query_id, 'doc_id': doc_id, 'retrieval_score': retrieval_score,
+                        'input_ids': input_ids, 'input_mask': input_mask}
         else:
             raise ValueError('Mode must be `train`, `dev` or `test`.')
 
     def pack_roberta_features(self, query_tokens: List[str], doc_tokens: List[str]):
-        input_tokens = [self._tokenizer.cls_token] + query_tokens + [self._tokenizer.sep_token] * 2 + doc_tokens + [self._tokenizer.sep_token]
+        input_tokens = [self._tokenizer.cls_token] + query_tokens + [self._tokenizer.sep_token, self._tokenizer.cls_token] + doc_tokens + [self._tokenizer.sep_token]
         input_ids = self._tokenizer.convert_tokens_to_ids(input_tokens)
         input_mask = [0] + ([1] * len(query_tokens)) + [0, 0] + ([1] * len(doc_tokens)) + [0]
 
@@ -174,27 +215,51 @@ class RobertaDataset(Dataset):
                 return {'input_ids_pos': input_ids_pos, 'input_mask_pos': input_mask_pos,
                         'input_ids_neg': input_ids_neg, 'input_mask_neg': input_mask_neg}
             elif self._task == 'classification':
-                query_tokens = self._tokenizer.tokenize(example['query'])[:self._query_max_len]
-                doc_tokens = self._tokenizer.tokenize(example['doc'])[:self._seq_max_len-len(query_tokens)-4]
-                
-                input_ids, input_mask = self.pack_roberta_features(query_tokens, doc_tokens)
-                return {'input_ids': input_ids, 'input_mask': input_mask, 'label': example['label']}
+                tokenizer_output = self._tokenizer(example["query"], example["doc"], padding="max_length", truncation="only_second", max_length=512)
+                output = {"label": example["label"]}
+                output.update(tokenizer_output)
+                return output
+            elif self._task == "prompt_classification":
+                doc = example["doc"].strip()
+                text = self._template.replace("<q>", example["query"]).replace("<d>", doc).replace("[MASK]", "<mask>")
+                tokenizer_output = self._tokenizer(text, padding="max_length", truncation=True, max_length=512)
+                input_ids = tokenizer_output["input_ids"]
+                mask_pos = input_ids.index(self._tokenizer.mask_token_id)
+                output = {"label": example["label"], "mask_pos": mask_pos}
+                output.update(tokenizer_output)
+                return output
             else:
                 raise ValueError('Task must be `ranking` or `classification`.')
         elif self._mode == 'dev':
-            query_tokens = self._tokenizer.tokenize(example['query'])[:self._query_max_len]
-            doc_tokens = self._tokenizer.tokenize(example['doc'])[:self._seq_max_len-len(query_tokens)-4]
-
-            input_ids, input_mask = self.pack_roberta_features(query_tokens, doc_tokens)
-            return {'query_id': example['query_id'], 'doc_id': example['doc_id'], 'label': example['label'], 'retrieval_score': example['retrieval_score'],
-                    'input_ids': input_ids, 'input_mask': input_mask}
+            if self._task.startswith("prompt"):
+                doc = example["doc"].strip()
+                text = self._template.replace("<q>", example["query"]).replace("<d>", doc).replace("[MASK]", "<mask>")
+                tokenizer_output = self._tokenizer(text, padding="max_length", truncation=True, max_length=512)
+                input_ids = tokenizer_output["input_ids"]
+                mask_pos = input_ids.index(self._tokenizer.mask_token_id)
+                output = {"label": example["label"], "mask_pos": mask_pos, 'query_id': example['query_id'], 'doc_id': example['doc_id'], 'retrieval_score': example['retrieval_score']}
+                output.update(tokenizer_output)
+                return output
+            else:
+                tokenizer_output = self._tokenizer(example["query"], example["doc"], padding="max_length", truncation="only_second", max_length=512)
+                output = {'query_id': example['query_id'], 'doc_id': example['doc_id'], 'label': example['label'], 'retrieval_score': example['retrieval_score']}
+                output.update(tokenizer_output)
+                return output
         elif self._mode == 'test':
-            query_tokens = self._tokenizer.tokenize(example['query'])[:self._query_max_len]
-            doc_tokens = self._tokenizer.tokenize(example['doc'])[:self._seq_max_len-len(query_tokens)-4]
-
-            input_ids, input_mask = self.pack_roberta_features(query_tokens, doc_tokens)
-            return {'query_id': example['query_id'], 'doc_id': example['doc_id'], 'retrieval_score': example['retrieval_score'],
-                    'input_ids': input_ids, 'input_mask': input_mask}
+            if self._task.startswith("prompt"):
+                doc = example["doc"].strip()
+                text = self._template.replace("<q>", example["query"]).replace("<d>", doc).replace("[MASK]", "<mask>")
+                tokenizer_output = self._tokenizer(text, padding="max_length", truncation=True, max_length=512)
+                input_ids = tokenizer_output["input_ids"]
+                mask_pos = input_ids.index(self._tokenizer.mask_token_id)
+                output = {"mask_pos": mask_pos, 'query_id': example['query_id'], 'doc_id': example['doc_id'], 'retrieval_score': example['retrieval_score']}
+                output.update(tokenizer_output)
+                return output
+            else:
+                tokenizer_output = self._tokenizer(example["query"], example["doc"], padding="max_length", truncation="only_second", max_length=512)
+                output = {'query_id': example['query_id'], 'doc_id': example['doc_id'], 'retrieval_score': example['retrieval_score']}
+                output.update(tokenizer_output)
+                return output
         else:
             raise ValueError('Mode must be `train`, `dev` or `test`.')
 
