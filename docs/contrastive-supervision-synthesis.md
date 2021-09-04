@@ -91,6 +91,7 @@ Optional arguments:
 --dataset_name choices=['clueweb09', 'robust04', 'trec-covid']
 --input_path The path to the target dataset
 --generator_folder The path to the sampled data
+```
 
 5/ Contrastive query generation. utilize the trained ContrastQG model to
 generate new queries based on contrastive document pairs using
@@ -107,5 +108,4 @@ Optional arguments:
 --pretrain_generator_type   choices=['t5-small', 't5-base']
 --target_dataset_name       The name of the target dataset
 --generator_load_dir        The path to the pretrained ContrastQG checkpoints
-
 ```
