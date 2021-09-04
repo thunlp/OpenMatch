@@ -3,7 +3,7 @@
 Here provides the guiding code for running contrastive supervision synthesis technique, short for ContrastQG. A detailed introduction to the technology can be found in the paper [**Few-Shot Text Ranking with Meta Adapted Synthetic Weak Supervision**](https://arxiv.org/pdf/2012.14862.pdf).
 
 
-### Source-domain NLG training.
+## Source-domain NLG training
 
 We train two query generators (QG & ContrastQG) with the MS MARCO dataset using `train_nlg.sh`:
 
@@ -20,7 +20,7 @@ Optional arguments:
 --save_dir                  The path to save the checkpoints data
 ```
 
-### Target-domain NLG inferences
+## Target-domain NLG inferences
 
 The whole nlg inference pipline contains five steps:
 
