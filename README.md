@@ -8,7 +8,7 @@ An Open-Source Package for Information Retrieval.
   [>> Reproduce Our Submit](./docs/experiments-treccovid.md) [>> About COVID-19 Dataset](https://www.semanticscholar.org/cord19) [>> Our Paper](https://arxiv.org/abs/2011.01580)
 
 ## Overview
-**OpenMatch** integrates excellent neural methods and technologies to provide a complete solution for deep text matching and understanding.
+**OpenMatch** integrates excellent neural methods and technologies to provide a complete solution for deep text matching and understanding. The documentation and tutorial of OpenMatch are available at [here](https://openmatch-docs.readthedocs.io/en/latest/index.html).
 
 >### 1/ Document Retrieval
 
