@@ -1,9 +1,6 @@
 # Contrastive Supervision Synthesis
 
-Here provides the guiding code for running contrastive supervision synthesis technique, short for ContrastQG.
-
-A detailed introduction to the technology can be found in the paper [**Few-Shot Text Ranking with Meta Adapted Synthetic Weak Supervision**](https://arxiv.org/pdf/2012.14862.pdf).
-
+Here provides the guiding code for running contrastive supervision synthesis technique, short for ContrastQG. A detailed introduction to the technology can be found in the paper [**Few-Shot Text Ranking with Meta Adapted Synthetic Weak Supervision**](https://arxiv.org/pdf/2012.14862.pdf).
 
 
 ### Source-domain NLG training.
@@ -85,7 +82,7 @@ from the BM25 retrieved subset using `sample_contrast_pairs.sh` in the
 folder `preprocess`:
 
 ```
-  bash sample_contrast_pairs.sh
+bash sample_contrast_pairs.sh
 ```
 
 Optional arguments:
@@ -110,4 +107,5 @@ Optional arguments:
 --pretrain_generator_type   choices=['t5-small', 't5-base']
 --target_dataset_name       The name of the target dataset
 --generator_load_dir        The path to the pretrained ContrastQG checkpoints
+
 ```
