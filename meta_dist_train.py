@@ -112,7 +112,7 @@ def mkdir_folder(folder):
 def save_checkpoint(save_dir, model, m_optim, m_scheduler, global_step):
     # save model
     torch.save(
-        model.state_dict(),
+        model.module.state_dict() if hasattr(model, 'module') else model.state_dict(),
         os.path.join(save_dir, "model.bin")
     )
     # save optimizer
@@ -231,7 +231,7 @@ if __name__ == "__main__":
         max_input=args.max_input,
         task=args.task
     )
-    
+
     ## dev data
     logger.info('reading dev data...')
     dev_set = om.data.datasets.MetaBertDataset(
