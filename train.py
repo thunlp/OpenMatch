@@ -34,7 +34,13 @@ def dev(args, model, metric, dev_loader, device):
     for dev_batch in tqdm(dev_loader, disable=args.local_rank not in [-1, 0]):
         query_id, doc_id, label, retrieval_score = dev_batch['query_id'], dev_batch['doc_id'], dev_batch['label'], dev_batch['retrieval_score']
         with torch.no_grad():
-            if args.model == 'bert':
+            if args.model== 't5':
+                batch_score=model(input_ids=dev_batch['input_ids'].to(device), 
+                attention_mask=dev_batch['attention_mask'].to(device),
+                labels= dev_batch['labels'].to(device),
+                label=dev_batch['label'].to(device)
+                )
+            elif args.model == 'bert':
                 if args.task.startswith("prompt"):
                     batch_score, _ = model(dev_batch['input_ids'].to(device), dev_batch['mask_pos'].to(device),dev_batch['input_mask'].to(device), dev_batch['segment_ids'].to(device))
                 else:
@@ -292,8 +298,15 @@ def train(args, model, loss_fn, m_optim, m_scheduler, metric, train_loader, dev_
             # print("hello?")
             
             sync_context = model.no_sync if (args.local_rank != -1 and (step+1) % args.gradient_accumulation_steps != 0) else nullcontext
-
-            if args.model == 'bert':
+            if args.model == 't5':
+                with sync_context():
+                    batch_score = model(
+                        input_ids=train_batch['input_ids'].to(device), 
+                        attention_mask=train_batch['attention_mask'].to(device), 
+                        labels=train_batch['labels'].to(device),
+                        label=train_batch['label'].to(device)
+                        )
+            elif args.model == 'bert':
                 if args.task == 'ranking':
                     # sync gradients only at gradient accumulation step
                     with sync_context():
@@ -457,6 +470,8 @@ def train(args, model, loss_fn, m_optim, m_scheduler, metric, train_loader, dev_
 
                         best_mes = mes if mes >= best_mes else best_mes
                         logger.info('save_model at step {}'.format(global_step+1))
+                        if not os.path.exists(args.save):
+                                os.makedirs(args.save)
                         if hasattr(model, "module"):
                             torch.save(model.module.state_dict(), args.save + "_step-{}.bin".format(global_step+1))
                         else:
@@ -537,7 +552,29 @@ def main():
         args.tb = None
 
     args.model = args.model.lower()
-    if args.model == 'bert':
+    if args.model=="t5":
+        tokenizer = AutoTokenizer.from_pretrained(args.vocab)
+        logger.info('reading training data...')
+        train_set = om.data.datasets.t5Dataset(
+                dataset=args.train,
+                tokenizer=tokenizer,
+                mode='train',
+                query_max_len=args.max_query_len,
+                doc_max_len=args.max_doc_len,
+                max_input=args.max_input,
+                task=args.task,
+            )
+        logger.info('reading dev data...')
+        dev_set = om.data.datasets.t5Dataset(
+                dataset=args.dev,
+                tokenizer=tokenizer,
+                mode='dev',
+                query_max_len=args.max_query_len,
+                doc_max_len=args.max_doc_len,
+                max_input=args.max_input,
+                task=args.task,
+            )
+    elif args.model == 'bert':
         tokenizer = AutoTokenizer.from_pretrained(args.vocab)
         if args.task.startswith("prompt"):
             pos_word_id = tokenizer(args.pos_word, add_special_tokens=False)["input_ids"]
@@ -719,7 +756,9 @@ def main():
         )
         train_sampler = None
 
-    if args.model == 'bert' or args.model == 'roberta':
+    if args.model == "t5":
+        model = om.models.t5(checkpoint=args.pretrain)
+    elif args.model == 'bert' or args.model == 'roberta':
         if args.maxp:
             model = om.models.BertMaxP(
                 pretrained=args.pretrain,
