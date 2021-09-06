@@ -5,3 +5,4 @@ from OpenMatch.models.conv_knrm import ConvKNRM
 from OpenMatch.models.knrm import KNRM
 from OpenMatch.models.tk import TK
 from OpenMatch.models.edrm import EDRM
+from OpenMatch.models.t5 import t5
