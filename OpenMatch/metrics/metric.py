@@ -38,15 +38,12 @@ class Metric():
                 run[qid].append(did)
         
         mrr = 0.0
-        intersect = 0
         for qid in run:
             rr = 0.0
-            if qid in qrel:
-                intersect += 1
-                for i, did in enumerate(run[qid][:k]):
-                    if did in qrel[qid] and qrel[qid][did] > 0:
-                        rr = 1 / (i+1)
-                        break
+            for i, did in enumerate(run[qid][:k]):
+                if qid in qrel and did in qrel[qid] and qrel[qid][did] > 0:
+                    rr = 1 / (i+1)
+                    break
             mrr += rr
-        mrr /= intersect
+        mrr /= len(run)
         return mrr
