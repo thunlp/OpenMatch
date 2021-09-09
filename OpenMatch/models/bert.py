@@ -28,7 +28,7 @@ class Bert(nn.Module):
             raise ValueError('Task must be `ranking` or `classification`.')
 
     def forward(self, input_ids: torch.Tensor, input_mask: torch.Tensor = None, segment_ids: torch.Tensor = None) -> Tuple[torch.Tensor, torch.Tensor]:
-        output = self._model(input_ids, attention_mask = input_mask, token_type_ids = segment_ids, return_dict=False)
+        output = self._model(input_ids, attention_mask = input_mask, token_type_ids = segment_ids)
         if self._mode == 'cls':
             logits = output[0][:, 0, :]
         elif self._mode == 'pooling':
