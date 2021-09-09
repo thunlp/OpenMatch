@@ -21,6 +21,7 @@ class t5Dataset(Dataset):
         neg_word: str='Fal',
         pos_word: str='True'
     ) -> None:
+    
         self._label_mapping=[neg_word,pos_word]
         self._dataset = dataset
         self._tokenizer = tokenizer
