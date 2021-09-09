@@ -90,3 +90,8 @@ ENV/
 
 .DS_Store
 */.DS_Store
+logs/
+
+checkpoints/
+.venv/
+results/

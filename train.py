@@ -18,21 +18,39 @@ torch.multiprocessing.set_sharing_strategy('file_system')
 import logging
 import random
 import numpy as np
+from tqdm import tqdm
+logging.basicConfig(level = logging.INFO)
 logger = logging.getLogger(__name__)
-# from torch.utils.tensorboard import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
+
+import os
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 # writer = SummaryWriter(log_dir='logs')
 
 
 def dev(args, model, metric, dev_loader, device):
     rst_dict = {}
-    for dev_batch in dev_loader:
+    for dev_batch in tqdm(dev_loader, disable=args.local_rank not in [-1, 0]):
         query_id, doc_id, label, retrieval_score = dev_batch['query_id'], dev_batch['doc_id'], dev_batch['label'], dev_batch['retrieval_score']
         with torch.no_grad():
-            if args.model == 'bert':
-                batch_score, _ = model(dev_batch['input_ids'].to(device), dev_batch['input_mask'].to(device), dev_batch['segment_ids'].to(device))
+            if args.model== 't5':
+                batch_score=model(input_ids=dev_batch['input_ids'].to(device), 
+                attention_mask=dev_batch['attention_mask'].to(device),
+                labels= dev_batch['labels'].to(device),
+                label=dev_batch['label'].to(device)
+                )
+            elif args.model == 'bert':
+                if args.task.startswith("prompt"):
+                    batch_score, _ = model(dev_batch['input_ids'].to(device), dev_batch['mask_pos'].to(device),dev_batch['input_mask'].to(device), dev_batch['segment_ids'].to(device))
+                else:
+                    batch_score, _ = model(dev_batch['input_ids'].to(device), dev_batch['input_mask'].to(device), dev_batch['segment_ids'].to(device))
             elif args.model == 'roberta':
-                batch_score, _ = model(dev_batch['input_ids'].to(device), dev_batch['input_mask'].to(device))
+                if args.task.startswith("prompt"):
+                    batch_score, _ = model(dev_batch['input_ids'].to(device), dev_batch['mask_pos'].to(device), dev_batch['input_mask'].to(device))
+                else:
+                    batch_score, _ = model(dev_batch['input_ids'].to(device), dev_batch['input_mask'].to(device))
+
             elif args.model == 'edrm':
                 batch_score, _ = model(dev_batch['query_wrd_idx'].to(device), dev_batch['query_wrd_mask'].to(device),
                                        dev_batch['doc_wrd_idx'].to(device), dev_batch['doc_wrd_mask'].to(device),
@@ -42,8 +60,10 @@ def dev(args, model, metric, dev_loader, device):
             else:
                 batch_score, _ = model(dev_batch['query_idx'].to(device), dev_batch['query_mask'].to(device),
                                        dev_batch['doc_idx'].to(device), dev_batch['doc_mask'].to(device))
-            if args.task == 'classification':
+            if args.task == 'classification' or args.task == "prompt_classification":
                 batch_score = batch_score.softmax(dim=-1)[:, 1].squeeze(-1)
+            elif args.task == "prompt_ranking":
+                batch_score = batch_score[:, 0]
             batch_score = batch_score.detach().cpu().tolist()
             for (q_id, d_id, b_s, l) in zip(query_id, doc_id, batch_score, label):
                 if q_id not in rst_dict:
@@ -264,9 +284,10 @@ def train_reinfoselect(args, model, policy, loss_fn, m_optim, m_scheduler, p_opt
                 log_prob_ps = []
                 log_prob_ns = []
 
-def train(args, model, loss_fn, m_optim, m_scheduler, metric, train_loader, dev_loader, device, train_sampler=None):
+def train(args, model, loss_fn, m_optim, m_scheduler, metric, train_loader, dev_loader, device, train_sampler=None, tokenizer=None):
     best_mes = 0.0
     global_step = 0 # steps that outside epoches
+    force_break = False
     for epoch in range(args.epoch):
         if args.local_rank != -1:
             train_sampler.set_epoch(epoch) # shuffle data for distributed
@@ -274,10 +295,18 @@ def train(args, model, loss_fn, m_optim, m_scheduler, metric, train_loader, dev_
 
         avg_loss = 0.0
         for step, train_batch in enumerate(train_loader):
+            # print("hello?")
             
             sync_context = model.no_sync if (args.local_rank != -1 and (step+1) % args.gradient_accumulation_steps != 0) else nullcontext
-
-            if args.model == 'bert':
+            if args.model == 't5':
+                with sync_context():
+                    batch_score = model(
+                        input_ids=train_batch['input_ids'].to(device), 
+                        attention_mask=train_batch['attention_mask'].to(device), 
+                        labels=train_batch['labels'].to(device),
+                        label=train_batch['label'].to(device)
+                        )
+            elif args.model == 'bert':
                 if args.task == 'ranking':
                     # sync gradients only at gradient accumulation step
                     with sync_context():
@@ -286,6 +315,23 @@ def train(args, model, loss_fn, m_optim, m_scheduler, metric, train_loader, dev_
                 elif args.task == 'classification':
                     with sync_context():
                         batch_score, _ = model(train_batch['input_ids'].to(device), train_batch['input_mask'].to(device), train_batch['segment_ids'].to(device))
+                elif args.task == "prompt_ranking":
+                    with sync_context():
+                        rel_and_irrel_logits_pos, masked_token_logits_pos = model(train_batch['input_ids_pos'].to(device), train_batch['mask_pos_pos'].to(device), train_batch['input_mask_pos'].to(device), train_batch['segment_ids_pos'].to(device))
+                        rel_and_irrel_logits_neg, masked_token_logits_neg = model(train_batch['input_ids_neg'].to(device), train_batch['mask_pos_neg'].to(device), train_batch['input_mask_neg'].to(device), train_batch['segment_ids_neg'].to(device))
+                        # print(rel_and_irrel_logits_pos>rel_and_irrel_logits_neg)
+                        # input()
+                elif args.task == "prompt_classification":
+                    with sync_context():
+                        batch_score, masked_token_logits = model(train_batch['input_ids'].to(device), train_batch['mask_pos'].to(device), train_batch['input_mask'].to(device), train_batch['segment_ids'].to(device))
+                        # max_token_id = torch.argmax(masked_token_logits, 1).detach().cpu().tolist()  # batch_size
+                        # _, topk_indices = torch.topk(masked_token_logits, 10)
+                        # topk_indices = topk_indices.detach().cpu().tolist()
+                        # for topk in topk_indices:
+                        #     print(tokenizer.convert_ids_to_tokens(topk))
+                        # print(max_token_id)
+                        # print(tokenizer.convert_ids_to_tokens(max_token_id))
+                        # input()
                 else:
                     raise ValueError('Task must be `ranking` or `classification`.')
             elif args.model == 'roberta':
@@ -294,6 +340,9 @@ def train(args, model, loss_fn, m_optim, m_scheduler, metric, train_loader, dev_
                     batch_score_neg, _ = model(train_batch['input_ids_neg'].to(device), train_batch['input_mask_neg'].to(device))
                 elif args.task == 'classification':
                     batch_score, _ = model(train_batch['input_ids'].to(device), train_batch['input_mask'].to(device))
+                elif args.task == "prompt_classification":
+                    with sync_context():
+                        batch_score, masked_token_logits = model(train_batch['input_ids'].to(device), train_batch['mask_pos'].to(device), train_batch['input_mask'].to(device))
                 else:
                     raise ValueError('Task must be `ranking` or `classification`.')
             elif args.model == 'edrm':
@@ -323,7 +372,7 @@ def train(args, model, loss_fn, m_optim, m_scheduler, metric, train_loader, dev_
                                                 train_batch['doc_pos_idx'].to(device), train_batch['doc_pos_mask'].to(device))
                         batch_score_neg, _ = model(train_batch['query_idx'].to(device), train_batch['query_mask'].to(device),
                                                 train_batch['doc_neg_idx'].to(device), train_batch['doc_neg_mask'].to(device))
-                elif args.task == 'classification':
+                elif args.task == 'classification' or "prompt_classification":
                     batch_score, _ = model(train_batch['query_idx'].to(device), train_batch['query_mask'].to(device),
                                            train_batch['doc_idx'].to(device), train_batch['doc_mask'].to(device))
                 else:
@@ -341,9 +390,20 @@ def train(args, model, loss_fn, m_optim, m_scheduler, metric, train_loader, dev_
                         batch_loss = torch.mean(-1.0 * lsm[:, 0])
                     elif args.ranking_loss == 'LCE_loss':
                         pass
-            elif args.task == 'classification':
+            elif args.task == 'classification' or args.task == "prompt_classification":
                 with sync_context():
-                    batch_loss = loss_fn(batch_score, train_batch['label'].to(device))
+                    # print(batch_score)
+                    if args.ranking_loss == "bce":
+                        batch_loss = loss_fn(batch_score[:, 1], train_batch['label'].type(torch.FloatTensor).to(device))
+                    else:
+                        batch_loss = loss_fn(batch_score, train_batch['label'].to(device))
+                    # print(train_batch['label'])
+                    # input()
+            elif args.task == "prompt_ranking":
+                with sync_context():
+                    loss_rel = loss_fn(rel_and_irrel_logits_pos[:, 0], rel_and_irrel_logits_neg[:, 0], torch.ones(rel_and_irrel_logits_pos[:, 0].size()).to(device))
+                    loss_irrel = loss_fn(rel_and_irrel_logits_neg[:, 1], rel_and_irrel_logits_pos[:, 1], torch.ones(rel_and_irrel_logits_neg[:, 1].size()).to(device))
+                    batch_loss = loss_rel + loss_irrel
             else:
                 raise ValueError('Task must be `ranking` or `classification`.')
 
@@ -370,14 +430,15 @@ def train(args, model, loss_fn, m_optim, m_scheduler, metric, train_loader, dev_
                 m_optim.step()
                 m_scheduler.step()
                 m_optim.zero_grad()
-                global_step += 1
+                # global_step += 1
+                # print("step")
 
                 if args.logging_step > 0 and ((global_step+1) % args.logging_step == 0 or (args.test_init_log and global_step==0)):
-                    # if is_first_worker():
-                    if args.local_rank in [-1,0]:
-                        logger.info( "training gpu {}:,  global step: {}, local step: {}, loss: {}".format(args.local_rank,global_step+1, step+1, avg_loss/args.logging_step))
-                        # writer.add_scalar('avg_loss',avg_loss/args.logging_step, step)
-                        # writer.add_scalar('dev', mes, step)
+                    if args.local_rank in [-1, 0]:
+                        logger.info("training gpu {}:,  global step: {}, local step: {}, loss: {}".format(args.local_rank,global_step+1, step+1, avg_loss/args.logging_step))
+                        if args.tb is not None:
+                            args.tb.add_scalar("loss", avg_loss/args.logging_step, global_step + 1)
+                            args.tb.add_scalar("epochs", epoch + 1, global_step + 1)
                     avg_loss = 0.0 
 
                 if (global_step+1) % args.eval_every == 0 or (args.test_init_log and global_step==0):                
@@ -404,14 +465,33 @@ def train(args, model, loss_fn, m_optim, m_scheduler, metric, train_loader, dev_
                         else:
                             mes = metric.get_metric(args.qrels, args.res, args.metric)
 
+                        if args.tb is not None:
+                            args.tb.add_scalar("dev", mes, global_step + 1)
+
                         best_mes = mes if mes >= best_mes else best_mes
-                        logger.info( 'save_model at step {}'.format(global_step+1))
-                        if args.n_gpu > 1:
-                            torch.save(model.module.state_dict(), args.save + "_step-{}".format(global_step+1))
+                        logger.info('save_model at step {}'.format(global_step+1))
+                        if not os.path.exists(args.save):
+                                os.makedirs(args.save)
+                        if hasattr(model, "module"):
+                            torch.save(model.module.state_dict(), args.save + "_step-{}.bin".format(global_step+1))
                         else:
-                            torch.save(model.state_dict(), args.save + "_step-{}".format(global_step+1))
-                        logger.info( "global step: {}, messure: {}, best messure: {}".format(global_step+1, mes, best_mes))
-            # dist.barrier()  
+                            torch.save(model.state_dict(), args.save + "_step-{}.bin".format(global_step+1))
+                        # if args.n_gpu > 1:
+                        #     torch.save(model.module.state_dict(), args.save + "_step-{}.bin".format(global_step+1))
+                        # else:
+                        #     torch.save(model.state_dict(), args.save + "_step-{}.bin".format(global_step+1))
+                        logger.info("global step: {}, messure: {}, best messure: {}".format(global_step+1, mes, best_mes))
+                
+                global_step += 1
+
+                if args.max_steps is not None and global_step == args.max_steps:
+                    force_break = True
+                    break
+        
+        if force_break:
+            break
+    if args.local_rank != -1:
+        dist.barrier()
 
 
 def main():
@@ -444,7 +524,7 @@ def main():
     parser.add_argument('-lr', type=float, default=2e-5)
     parser.add_argument('-tau', type=float, default=1)
     parser.add_argument('-n_warmup_steps', type=int, default=1000)
-    parser.add_argument('-gradient_accumulation_steps', type=int, default=4) 
+    parser.add_argument('-gradient_accumulation_steps', type=int, default=1) 
     parser.add_argument("-max_grad_norm", default=1.0,type=float,help="Max gradient norm.",)
     parser.add_argument('-eval_every', type=int, default=1000)
     parser.add_argument('-logging_step', type=int, default=100)
@@ -453,14 +533,58 @@ def main():
     parser.add_argument('--local_rank', type=int, default=-1) # for distributed mode
     parser.add_argument( "--server_ip",type=str,default="", help="For distant debugging.",)  
     parser.add_argument( "--server_port",type=str, default="",help="For distant debugging.",)
+    parser.add_argument("--log_dir", type=str)
+
+    parser.add_argument("--template", type=str, default="<q> is [MASK].\" <d>")
+    parser.add_argument("--pos_word", type=str, default="relevant")
+    parser.add_argument("--neg_word", type=str, default="irrelevant")
+
+    parser.add_argument("--max_steps", type=int)
 
     args = parser.parse_args()
 
     set_dist_args(args) # get local cpu/gpu device
 
+    if args.log_dir is not None:
+        writer = SummaryWriter(args.log_dir)
+        args.tb = writer
+    else:
+        args.tb = None
+
     args.model = args.model.lower()
-    if args.model == 'bert':
+    if args.model=="t5":
         tokenizer = AutoTokenizer.from_pretrained(args.vocab)
+        logger.info('reading training data...')
+        train_set = om.data.datasets.t5Dataset(
+                dataset=args.train,
+                tokenizer=tokenizer,
+                mode='train',
+                query_max_len=args.max_query_len,
+                doc_max_len=args.max_doc_len,
+                max_input=args.max_input,
+                task=args.task,
+            )
+        logger.info('reading dev data...')
+        dev_set = om.data.datasets.t5Dataset(
+                dataset=args.dev,
+                tokenizer=tokenizer,
+                mode='dev',
+                query_max_len=args.max_query_len,
+                doc_max_len=args.max_doc_len,
+                max_input=args.max_input,
+                task=args.task,
+            )
+    elif args.model == 'bert':
+        tokenizer = AutoTokenizer.from_pretrained(args.vocab)
+        if args.task.startswith("prompt"):
+            pos_word_id = tokenizer(args.pos_word, add_special_tokens=False)["input_ids"]
+            neg_word_id = tokenizer(args.neg_word, add_special_tokens=False)["input_ids"]
+            print(pos_word_id, neg_word_id)
+            if len(neg_word_id) > 1 or len(pos_word_id) > 1:
+                raise ValueError("Label words longer than 1 after tokenization")
+            pos_word_id = pos_word_id[0]
+            neg_word_id = neg_word_id[0]
+            tokenizer.add_tokens(["[SP1]", "[SP2]", "[SP3]", "[SP4]"], special_tokens=True)  # For continuous prompt
         logger.info('reading training data...')
         if args.maxp:
             train_set = om.data.datasets.BertMaxPDataset(
@@ -480,7 +604,8 @@ def main():
                 query_max_len=args.max_query_len,
                 doc_max_len=args.max_doc_len,
                 max_input=args.max_input,
-                task=args.task
+                task=args.task,
+                template=args.template
             )
         logger.info('reading dev data...')
         if args.maxp:
@@ -501,10 +626,20 @@ def main():
                 query_max_len=args.max_query_len,
                 doc_max_len=args.max_doc_len,
                 max_input=args.max_input,
-               task=args.task
+               task=args.task,
+               template=args.template
             )
     elif args.model == 'roberta':
         tokenizer = AutoTokenizer.from_pretrained(args.vocab)
+        if args.task.startswith("prompt"):
+            pos_word_id = tokenizer(args.pos_word, add_special_tokens=False)["input_ids"]
+            neg_word_id = tokenizer(args.neg_word, add_special_tokens=False)["input_ids"]
+            print(pos_word_id, neg_word_id)
+            if len(neg_word_id) > 1 or len(pos_word_id) > 1:
+                raise ValueError("Label words longer than 1 after tokenization")
+            pos_word_id = pos_word_id[0]
+            neg_word_id = neg_word_id[0]
+            tokenizer.add_tokens(["[SP1]", "[SP2]", "[SP3]", "[SP4]"], special_tokens=True)
         print('reading training data...')
         train_set = om.data.datasets.RobertaDataset(
             dataset=args.train,
@@ -513,7 +648,8 @@ def main():
             query_max_len=args.max_query_len,
             doc_max_len=args.max_doc_len,
             max_input=args.max_input,
-            task=args.task
+            task=args.task,
+            template=args.template
         )
         print('reading dev data...')
         dev_set = om.data.datasets.RobertaDataset(
@@ -523,7 +659,8 @@ def main():
             query_max_len=args.max_query_len,
             doc_max_len=args.max_doc_len,
             max_input=args.max_input,
-            task=args.task
+            task=args.task,
+            template=args.template
         )
     elif args.model == 'edrm':
         tokenizer = om.data.tokenizers.WordTokenizer(
@@ -590,7 +727,7 @@ def main():
             dataset=train_set,
             batch_size=args.batch_size,
             shuffle=False,
-            num_workers=1,
+            num_workers=8,
             sampler=train_sampler
         )
         #dev_sampler = DistributedSampler(dev_set)
@@ -599,7 +736,7 @@ def main():
             dataset=dev_set,
             batch_size=args.batch_size * 16 if args.dev_eval_batch_size <= 0 else args.dev_eval_batch_size,
             shuffle=False,
-            num_workers=1,
+            num_workers=8,
             sampler=dev_sampler
         )
         dist.barrier()
@@ -609,17 +746,19 @@ def main():
             dataset=train_set,
             batch_size=args.batch_size,
             shuffle=True,
-            num_workers=8
+            num_workers=0
         )
         dev_loader = om.data.DataLoader(
             dataset=dev_set,
-            batch_size=args.batch_size * 16,
+            batch_size=args.dev_eval_batch_size,
             shuffle=False,
-            num_workers=8
+            num_workers=0
         )
         train_sampler = None
 
-    if args.model == 'bert' or args.model == 'roberta':
+    if args.model == "t5":
+        model = om.models.t5(checkpoint=args.pretrain)
+    elif args.model == 'bert' or args.model == 'roberta':
         if args.maxp:
             model = om.models.BertMaxP(
                 pretrained=args.pretrain,
@@ -629,11 +768,21 @@ def main():
                 task=args.task
             )
         else:
-            model = om.models.Bert(
-                pretrained=args.pretrain,
-                mode=args.mode,
-                task=args.task
-            )
+            if args.task.startswith("prompt"):
+                model = om.models.BertPrompt(
+                    pretrained=args.pretrain,
+                    mode=args.mode,
+                    task=args.task,
+                    pos_word_id=pos_word_id,
+                    neg_word_id=neg_word_id
+                )
+                model._model.resize_token_embeddings(len(tokenizer))
+            else:
+                model = om.models.Bert(
+                    pretrained=args.pretrain,
+                    mode=args.mode,
+                    task=args.task
+                )
         if args.reinfoselect:
             policy = om.models.Bert(
                 pretrained=args.pretrain,
@@ -725,7 +874,7 @@ def main():
         else:
             raise ValueError('Task must be `ranking` or `classification`.')
     else:
-        if args.task == 'ranking':
+        if args.task == 'ranking' or args.task == "prompt_ranking":
             if args.ranking_loss == 'margin_loss':
                 loss_fn = nn.MarginRankingLoss(margin=1)
             elif args.ranking_loss == 'CE_loss':
@@ -737,8 +886,11 @@ def main():
                 print("LCE loss TODO")
                 # nn.CrossEntropyLoss()
 
-        elif args.task == 'classification':
-            loss_fn = nn.CrossEntropyLoss()
+        elif args.task == 'classification' or args.task == "prompt_classification":
+            if args.ranking_loss == "bce":
+                loss_fn = nn.BCEWithLogitsLoss()
+            else:
+                loss_fn = nn.CrossEntropyLoss()
         else:
             raise ValueError('Task must be `ranking` or `classification`.')
 
@@ -769,9 +921,9 @@ def main():
         m_optim = AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr)
 
     if args.local_rank == -1:
-        m_scheduler = get_linear_schedule_with_warmup(m_optim, num_warmup_steps=args.n_warmup_steps, num_training_steps=len(train_set)*args.epoch//args.batch_size)
+        m_scheduler = get_linear_schedule_with_warmup(m_optim, num_warmup_steps=args.n_warmup_steps, num_training_steps=len(train_set)*args.epoch//args.batch_size if args.max_steps is None else args.max_steps)
     else:
-        m_scheduler = get_linear_schedule_with_warmup(m_optim, num_warmup_steps=args.n_warmup_steps, num_training_steps=len(train_set)*args.epoch//(args.batch_size*args.world_size*args.gradient_accumulation_steps))
+        m_scheduler = get_linear_schedule_with_warmup(m_optim, num_warmup_steps=args.n_warmup_steps, num_training_steps=len(train_set)*args.epoch//(args.batch_size*args.world_size*args.gradient_accumulation_steps) if args.max_steps is None else args.max_steps)
     if args.reinfoselect:
         p_optim = torch.optim.Adam(filter(lambda p: p.requires_grad, policy.parameters()), lr=args.lr)
 
@@ -784,7 +936,7 @@ def main():
     if args.reinfoselect:
         train_reinfoselect(args, model, policy, loss_fn, m_optim, m_scheduler, p_optim, metric, train_loader, dev_loader, device)
     else:
-        train(args, model, loss_fn, m_optim, m_scheduler, metric, train_loader, dev_loader, device, train_sampler=train_sampler)
+        train(args, model, loss_fn, m_optim, m_scheduler, metric, train_loader, dev_loader, device, train_sampler=train_sampler, tokenizer=tokenizer)
 
 if __name__ == "__main__":
     main()
