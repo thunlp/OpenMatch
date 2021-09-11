@@ -18,9 +18,10 @@ class t5Dataset(Dataset):
         doc_max_len: int = 250,
         max_input: int = 1280000,
         task: str = 'classification',
-        neg_word: str='false',
-        pos_word: str='true'
+        neg_word: str='Fal',
+        pos_word: str='True'
     ) -> None:
+    
         self._label_mapping=[neg_word,pos_word]
         self._dataset = dataset
         self._tokenizer = tokenizer
@@ -56,10 +57,13 @@ class t5Dataset(Dataset):
 
     def __getitem__(self, index: int) -> Dict[str, Any]:
         example = self._examples[index]
-        if len(example["query"]) > self._query_max_len:
-            example['query']=example['query'][:self._query_max_len]
-        if len(example["doc"]) > self._doc_max_len:
-            example['doc']=example['doc'][:self._doc_max_len]
+        #print(example['query'].split(' '))
+        #print(len(example['query'].split(' ')))
+        #exit(0)
+        if len(example["query"].split(' ')) > self._query_max_len:
+            example['query']=' '.join(example['query'].split(' ')[:self._query_max_len])
+        if len(example["doc"].split(' ')) > self._doc_max_len:
+            example['doc']=' '.join(example['doc'].split(' ')[:self._doc_max_len])
         if self._mode == 'train':
             if self._task == 'classification':
                 text='Query: '+example["query"]+' Document: '+example["doc"]+' Relevant: '
