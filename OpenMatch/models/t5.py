@@ -10,6 +10,6 @@ class t5(nn.Module):
     def forward(self,input_ids,attention_mask,labels,label):       
         output=self.t5(input_ids=input_ids,labels=labels,attention_mask=attention_mask,return_dict=True)        
         logits=output.logits
-        batch_score=logits[:,0,[10747,10998]]
+        batch_score=logits[:,0,[6136,1176]]
         return batch_score
 
