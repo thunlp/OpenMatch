@@ -35,11 +35,13 @@ class BertMaxP(nn.Module):
             raise ValueError('Task must be `ranking` or `classification`.')
 
     def forward(self, input_ids: torch.Tensor, input_mask: torch.Tensor = None, segment_ids: torch.Tensor = None) -> Tuple[torch.Tensor, torch.Tensor]:
-        num = input_ids.size()[0]
+        num = input_ids.size()[0]  # batch_size * (4 * max_len)
+
+        # flatten
         output = self._model(input_ids.view(num*4, self._max_query_len+self._max_doc_len+3), attention_mask = input_mask.view(num*4, self._max_query_len+self._max_doc_len+3), token_type_ids = segment_ids.view(num*4, self._max_query_len+self._max_doc_len+3))
 
         if self._mode == 'cls':
-            logits = output[0][:, 0, :].view(num,4,-1).max(dim=1)[0]
+            logits = output[0][:, 0, :].view(num,4,-1).max(dim=1)[0]  # batch_size * 4 * hidden_size  --max-polling--> batch_size * hidden_size
         elif self._mode == 'pooling':
             logits = output[1].view(num,4,-1).max(dim=1)[0]
         else:

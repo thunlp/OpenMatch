@@ -27,7 +27,7 @@ def merge_resfile(split_pattern, output_file):
         with open(s,'r') as f:
             for line in f:
                 qid, _, pid, _, score, _ = line.strip().split() # ranking is meaningless in distributed inference
-                score=float(score)
+                score = float(score)
                 if qid not in res_dict:
                     res_dict[qid]=[(pid,score)]
                 else:
@@ -210,7 +210,7 @@ def set_dist_args(args):
     else:  # Initializes the distributed backend which will take care of sychronizing nodes/GPUs
         torch.cuda.set_device(args.local_rank)
         device = torch.device("cuda", args.local_rank)
-        torch.distributed.init_process_group(backend="nccl")
+        torch.distributed.init_process_group(backend="nccl", init_method='env://')
         args.n_gpu = 1
     args.device = device
    

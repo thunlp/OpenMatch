@@ -50,3 +50,53 @@ class Metric():
             mrr += rr
         mrr /= intersect
         return mrr
+
+    def get_topk(self, qrels: str, trec: str, metric: str = "top_20") -> float:
+        k = int(metric.split('_')[-1])
+
+        qrel = {}
+        with open(qrels, 'r') as f_qrel:
+            for line in f_qrel:
+                qid, _, did, label = line.strip().split()
+                if qid not in qrel:
+                    qrel[qid] = {}
+                qrel[qid][did] = int(label)
+
+        run = {}
+        with open(trec, 'r') as f_run:
+            for line in f_run:
+                qid, _, did, _, _, _ = line.strip().split()
+                if qid not in run:
+                    run[qid] = []
+                run[qid].append(did)
+
+        # assert len(qrel) == len(run)
+
+        hits = []
+        for qid, doc_list in run.items():
+            hits.append([])
+            for docid in doc_list:
+                if qid in qrel:
+                    if docid in qrel[qid]:
+                        if qrel[qid][docid] > 0:
+                            hits[-1].append(True)
+                        else:
+                            hits[-1].append(False)
+                    else:
+                        hits[-1].append(False)
+                else:
+                    hits[-1].append(False)
+
+        n_docs = len(run[list(run.keys())[0]])
+        print(n_docs)
+        top_k_hits = [0] * n_docs
+        for question_hits in hits:
+            best_hit = next((i for i, x in enumerate(question_hits) if x), None)
+            if best_hit is not None:
+                top_k_hits[best_hit:] = [v + 1 for v in top_k_hits[best_hit:]]
+
+        top_k_hits_acc = [v / len(run) for v in top_k_hits]
+
+        print(top_k_hits_acc[0], top_k_hits_acc[4], top_k_hits_acc[19], top_k_hits_acc[99])
+
+        return top_k_hits_acc[k-1]

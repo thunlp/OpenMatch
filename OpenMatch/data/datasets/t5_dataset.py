@@ -31,8 +31,8 @@ class t5Dataset(Dataset):
         self._seq_max_len = query_max_len + doc_max_len + 11
         self._max_input = max_input
         self._task = task
-        if self._seq_max_len > 512:
-            raise ValueError('query_max_len + doc_max_len + 11 > 512.')
+        # if self._seq_max_len > 512:
+        #     raise ValueError('query_max_len + doc_max_len + 11 > 512.')
 
         
         if isinstance(self._dataset, str):
@@ -77,7 +77,7 @@ class t5Dataset(Dataset):
                 raise ValueError('Task must be  `classification`.')
         elif self._mode == 'dev':
             text='Query: '+example["query"]+' Document: '+example["doc"]+' Revelant: '
-            label_text=self._label_mapping[example['label']]
+            label_text=self._label_mapping[0]
             input_ids=self._tokenizer(text,padding="max_length",truncation=True,max_length=512)
             label=self._tokenizer(label_text).input_ids
             input_ids.update({"labels":label})

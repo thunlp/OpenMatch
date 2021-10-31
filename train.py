@@ -61,7 +61,12 @@ def dev(args, model, metric, dev_loader, device):
                 batch_score, _ = model(dev_batch['query_idx'].to(device), dev_batch['query_mask'].to(device),
                                        dev_batch['doc_idx'].to(device), dev_batch['doc_mask'].to(device))
             if args.task == 'classification' or args.task == "prompt_classification":
+                # print(batch_score)
+                # print(batch_score.shape)
                 batch_score = batch_score.softmax(dim=-1)[:, 1].squeeze(-1)
+                # print(batch_score)
+                # print(batch_score.shape)
+                # input()
             elif args.task == "prompt_ranking":
                 batch_score = batch_score[:, 0]
             batch_score = batch_score.detach().cpu().tolist()
@@ -295,7 +300,7 @@ def train(args, model, loss_fn, m_optim, m_scheduler, metric, train_loader, dev_
 
         avg_loss = 0.0
         for step, train_batch in enumerate(train_loader):
-            # print("hello?")
+            # print("Before: global step {}, rank {}".format(global_step, args.local_rank))
             
             sync_context = model.no_sync if (args.local_rank != -1 and (step+1) % args.gradient_accumulation_steps != 0) else nullcontext
             if args.model == 't5':
@@ -462,6 +467,8 @@ def train(args, model, loss_fn, m_optim, m_scheduler, metric, train_loader, dev_
                     if args.local_rank in [-1,0]:
                         if args.metric.split('_')[0] == 'mrr':
                             mes = metric.get_mrr(args.qrels, args.res, args.metric)
+                        elif args.metric.split("_")[0] == "top":
+                            mes = metric.get_topk(args.qrels, args.res, args.metric)
                         else:
                             mes = metric.get_metric(args.qrels, args.res, args.metric)
 
@@ -487,11 +494,19 @@ def train(args, model, loss_fn, m_optim, m_scheduler, metric, train_loader, dev_
                 if args.max_steps is not None and global_step == args.max_steps:
                     force_break = True
                     break
-        
+            # print("After: global step {}, rank {}".format(global_step, args.local_rank))
+            if args.local_rank != -1:
+                dist.barrier()
+            # print("After barrier: global step {}, rank {}".format(global_step, args.local_rank))
+        # print("After epoch: global step {}, rank {}".format(global_step, args.local_rank))
+        if args.local_rank != -1:
+            dist.barrier()
+        # print("After epoch barrier: global step {}, rank {}".format(global_step, args.local_rank))
         if force_break:
             break
     if args.local_rank != -1:
         dist.barrier()
+    # print("Finish training. {}".format(args.local_rank))
 
 
 def main():
@@ -535,7 +550,7 @@ def main():
     parser.add_argument( "--server_port",type=str, default="",help="For distant debugging.",)
     parser.add_argument("--log_dir", type=str)
 
-    parser.add_argument("--template", type=str, default="<q> is [MASK].\" <d>")
+    parser.add_argument("--template", type=str, default="The query \"<q>\" is [MASK] (relevant/irrelevant) to the document: <d>")
     parser.add_argument("--pos_word", type=str, default="relevant")
     parser.add_argument("--neg_word", type=str, default="irrelevant")
 
@@ -937,6 +952,15 @@ def main():
         train_reinfoselect(args, model, policy, loss_fn, m_optim, m_scheduler, p_optim, metric, train_loader, dev_loader, device)
     else:
         train(args, model, loss_fn, m_optim, m_scheduler, metric, train_loader, dev_loader, device, train_sampler=train_sampler, tokenizer=tokenizer)
+    # print("outside train. {}".format(args.local_rank))
+    if args.local_rank != -1:
+        dist.barrier()
+    # print("End. {}".format(args.local_rank))
+    
+    # print("End2. {}".format(args.local_rank))
 
 if __name__ == "__main__":
     main()
+    # dist.destroy_process_group()
+    # print("End")
+    # exit(0)

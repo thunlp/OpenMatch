@@ -177,17 +177,22 @@ class BertMaxPDataset(Dataset):
                 example['doc'] = self._docs[example['doc_id']]
         if self._mode == 'train':
             if self._task == 'ranking':
-                query_tokens = self._tokenizer.tokenize(example['query'])[:self._query_max_len]
-                doc_tokens_pos = self._tokenizer.tokenize(example['doc_pos'])#[:self._seq_max_len-len(query_tokens)-3]
-                doc_tokens_neg = self._tokenizer.tokenize(example['doc_neg'])#[:self._seq_max_len-len(query_tokens)-3]
+                query_tokens = self._tokenizer(example['query'], add_special_tokens=False).input_ids
+                doc_tokens_pos = self._tokenizer(example['doc_pos'], add_special_tokens=False).input_ids#[:self._seq_max_len-len(query_tokens)-3]
+                doc_tokens_neg = self._tokenizer(example['doc_neg'], add_special_tokens=False).input_ids#[:self._seq_max_len-len(query_tokens)-3]
 
                 pas_max_len = self._seq_max_len-len(query_tokens)-3
                 input_ids_poss, input_mask_poss, segment_ids_poss = [], [], []
                 input_ids_negs, input_mask_negs, segment_ids_negs = [], [], []
                 for i in range(4):
-                    input_ids_pos, input_mask_pos, segment_ids_pos = self.pack_bert_features(query_tokens, doc_tokens_pos[i*pas_max_len:(i+1)*pas_max_len])
-                    input_ids_neg, input_mask_neg, segment_ids_neg = self.pack_bert_features(query_tokens, doc_tokens_neg[i*pas_max_len:(i+1)*pas_max_len])
-                    
+                    cur_pos_doc_tokens = doc_tokens_pos[i*pas_max_len:(i+1)*pas_max_len]
+                    cur_neg_doc_tokens = doc_tokens_neg[i*pas_max_len:(i+1)*pas_max_len]
+                    # input_ids_pos, input_mask_pos, segment_ids_pos = self.pack_bert_features(query_tokens, doc_tokens_pos[i*pas_max_len:(i+1)*pas_max_len])
+                    # input_ids_neg, input_mask_neg, segment_ids_neg = self.pack_bert_features(query_tokens, doc_tokens_neg[i*pas_max_len:(i+1)*pas_max_len])
+                    output = self._tokenizer.prepare_for_model(query_tokens, cur_pos_doc_tokens, padding="max_length", truncation="only_second", max_length=512)
+                    input_ids_pos, input_mask_pos, segment_ids_pos = output.input_ids, output.attention_mask, output.token_type_ids
+                    output = self._tokenizer.prepare_for_model(query_tokens, cur_neg_doc_tokens, padding="max_length", truncation="only_second", max_length=512)
+                    input_ids_neg, input_mask_neg, segment_ids_neg = output.input_ids, output.attention_mask, output.token_type_ids
                     input_ids_poss += input_ids_pos
                     input_mask_poss += input_mask_pos
                     segment_ids_poss += segment_ids_pos
@@ -197,28 +202,44 @@ class BertMaxPDataset(Dataset):
                 return {'input_ids_pos': input_ids_poss, 'segment_ids_pos': segment_ids_poss, 'input_mask_pos': input_mask_poss,
                         'input_ids_neg': input_ids_negs, 'segment_ids_neg': segment_ids_negs, 'input_mask_neg': input_mask_negs}
             elif self._task == 'classification':
-                query_tokens = self._tokenizer.tokenize(example['query'])[:self._query_max_len]
-                doc_tokens = self._tokenizer.tokenize(example['doc'])#[:self._seq_max_len-len(query_tokens)-3]
+                query_tokens = self._tokenizer(example['query'].strip(), add_special_tokens=False).input_ids#[:self._query_max_len]
+                doc_tokens = self._tokenizer(example['doc'].strip(), add_special_tokens=False).input_ids#[:self._seq_max_len-len(query_tokens)-3]
+                title_tokens = self._tokenizer(example['title'].strip(), add_special_tokens=False).input_ids if "title" in example else []
                 
-                pas_max_len = self._seq_max_len-len(query_tokens)-3
+                pas_max_len = self._seq_max_len-len(query_tokens)-len(title_tokens)-3
                 input_idss, input_masks, segment_idss = [], [], []
                 for i in range(4):
-                    input_ids, input_mask, segment_ids = self.pack_bert_features(query_tokens, doc_tokens[i*pas_max_len:(i+1)*pas_max_len])
+                    cur_doc_tokens = doc_tokens[i*pas_max_len:(i+1)*pas_max_len]
+                    seq_2 = title_tokens+cur_doc_tokens
+                    output = self._tokenizer.prepare_for_model(query_tokens, seq_2 if seq_2 != [] else None, padding="max_length", truncation="only_second", max_length=512)
+                    input_ids, input_mask, segment_ids = output.input_ids, output.attention_mask, output.token_type_ids
+                    assert len(input_ids) == 512, (len(input_ids), len(query_tokens), len(title_tokens), len(cur_doc_tokens))
+                    assert len(input_mask) == 512, (len(input_mask), len(query_tokens), len(title_tokens), len(cur_doc_tokens))
+                    assert len(segment_ids) == 512, (len(segment_ids), len(query_tokens), len(title_tokens), len(cur_doc_tokens))
+                    # print("yes")
 
                     input_idss += input_ids
                     input_masks += input_mask
                     segment_idss += segment_ids
+
+                assert len(input_idss) == (512 * 4), len(input_idss)
+                assert len(input_masks) == (512 * 4), len(input_masks)
+                assert len(segment_idss) == (512 * 4), len(segment_idss)
                 return {'input_ids': input_idss, 'segment_ids': segment_idss, 'input_mask': input_masks, 'label': example['label']}
             else:
                 raise ValueError('Task must be `ranking` or `classification`.')
         elif self._mode == 'dev':
-            query_tokens = self._tokenizer.tokenize(example['query'])[:self._query_max_len]
-            doc_tokens = self._tokenizer.tokenize(example['doc'])#[:self._seq_max_len-len(query_tokens)-3]
+            query_tokens = self._tokenizer(example['query'], add_special_tokens=False).input_ids#[:self._query_max_len]
+            doc_tokens = self._tokenizer(example['doc'], add_special_tokens=False).input_ids#[:self._seq_max_len-len(query_tokens)-3]
+            title_tokens = self._tokenizer(example['title'].strip(), add_special_tokens=False).input_ids if "title" in example else []
 
-            pas_max_len = self._seq_max_len-len(query_tokens)-3
+            pas_max_len = self._seq_max_len-len(query_tokens)-len(title_tokens)-3
             input_idss, input_masks, segment_idss = [], [], []
             for i in range(4):
-                input_ids, input_mask, segment_ids = self.pack_bert_features(query_tokens, doc_tokens[i*pas_max_len:(i+1)*pas_max_len])
+                cur_doc_tokens = doc_tokens[i*pas_max_len:(i+1)*pas_max_len]
+                seq_2 = title_tokens+cur_doc_tokens
+                output = self._tokenizer.prepare_for_model(query_tokens, seq_2 if seq_2 != [] else None, padding="max_length", truncation="only_second", max_length=512)
+                input_ids, input_mask, segment_ids = output.input_ids, output.attention_mask, output.token_type_ids
 
                 input_idss += input_ids
                 input_masks += input_mask
@@ -227,13 +248,17 @@ class BertMaxPDataset(Dataset):
             return {'query_id': example['query_id'], 'doc_id': example['doc_id'], 'label': example['label'], 'retrieval_score': example['retrieval_score'],
                     'input_ids': input_idss, 'input_mask': input_masks, 'segment_ids': segment_idss}
         elif self._mode == 'test':
-            query_tokens = self._tokenizer.tokenize(example['query'])[:self._query_max_len]
-            doc_tokens = self._tokenizer.tokenize(example['doc'])#[:self._seq_max_len-len(query_tokens)-3]
+            query_tokens = self._tokenizer(example['query'], add_special_tokens=False).input_ids#[:self._query_max_len]
+            doc_tokens = self._tokenizer(example['doc'], add_special_tokens=False).input_ids#[:self._seq_max_len-len(query_tokens)-3]
+            title_tokens = self._tokenizer(example['title'].strip(), add_special_tokens=False).input_ids if "title" in example else []
 
-            pas_max_len = self._seq_max_len-len(query_tokens)-3
+            pas_max_len = self._seq_max_len-len(query_tokens)-len(title_tokens)-3
             input_idss, input_masks, segment_idss = [], [], []
             for i in range(4):
-                input_ids, input_mask, segment_ids = self.pack_bert_features(query_tokens, doc_tokens[i*pas_max_len:(i+1)*pas_max_len])
+                cur_doc_tokens = doc_tokens[i*pas_max_len:(i+1)*pas_max_len]
+                seq_2 = title_tokens+cur_doc_tokens
+                output = self._tokenizer.prepare_for_model(query_tokens, seq_2 if seq_2 != [] else None, padding="max_length", truncation="only_second", max_length=512)
+                input_ids, input_mask, segment_ids = output.input_ids, output.attention_mask, output.token_type_ids
 
                 input_idss += input_ids
                 input_masks += input_mask
