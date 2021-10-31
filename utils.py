@@ -27,6 +27,7 @@ def merge_resfile(split_pattern, output_file):
         with open(s,'r') as f:
             for line in f:
                 qid, _, pid, _, score, _ = line.strip().split() # ranking is meaningless in distributed inference
+                score=float(score)
                 if qid not in res_dict:
                     res_dict[qid]=[(pid,score)]
                 else:
