@@ -32,7 +32,7 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 def dev(args, model, metric, dev_loader, device):
     rst_dict = {}
     for dev_batch in tqdm(dev_loader, disable=args.local_rank not in [-1, 0]):
-        query_id, doc_id, label, retrieval_score = dev_batch['query_id'], dev_batch['doc_id'], dev_batch['label'], dev_batch['retrieval_score']
+        query_id, doc_id, label= dev_batch['query_id'], dev_batch['doc_id'], dev_batch['label']
         with torch.no_grad():
             if args.model== 't5':
                 batch_score=model(input_ids=dev_batch['input_ids'].to(device), 
@@ -420,6 +420,8 @@ def train(args, model, loss_fn, m_optim, m_scheduler, metric, train_loader, dev_
 
             with sync_context():
                 batch_loss.backward()
+                # print(model.module.soft_embedding.weight.grad[:30, :])
+                # input()
             # if args.local_rank != -1:
             #     if (step+1) % args.gradient_accumulation_steps == 0:
             #         batch_loss.backward()
@@ -439,6 +441,7 @@ def train(args, model, loss_fn, m_optim, m_scheduler, metric, train_loader, dev_
                 # print("step")
 
                 if args.logging_step > 0 and ((global_step+1) % args.logging_step == 0 or (args.test_init_log and global_step==0)):
+                    # print("in logging")
                     if args.local_rank in [-1, 0]:
                         logger.info("training gpu {}:,  global step: {}, local step: {}, loss: {}".format(args.local_rank,global_step+1, step+1, avg_loss/args.logging_step))
                         if args.tb is not None:
@@ -482,6 +485,9 @@ def train(args, model, loss_fn, m_optim, m_scheduler, metric, train_loader, dev_
                         if hasattr(model, "module"):
                             torch.save(model.module.state_dict(), args.save + "_step-{}.bin".format(global_step+1))
                         else:
+                            # if args.soft_prompt:
+                            #     model.save_prompts(args.save + "_prompts_step-{}.bin".format(global_step+1))
+                            # else:
                             torch.save(model.state_dict(), args.save + "_step-{}.bin".format(global_step+1))
                         # if args.n_gpu > 1:
                         #     torch.save(model.module.state_dict(), args.save + "_step-{}.bin".format(global_step+1))
@@ -550,9 +556,10 @@ def main():
     parser.add_argument( "--server_port",type=str, default="",help="For distant debugging.",)
     parser.add_argument("--log_dir", type=str)
 
-    parser.add_argument("--template", type=str, default="The query \"<q>\" is [MASK] (relevant/irrelevant) to the document: <d>")
-    parser.add_argument("--pos_word", type=str, default="relevant")
-    parser.add_argument("--neg_word", type=str, default="irrelevant")
+    parser.add_argument("--template", type=str, default="[SP0] <q> <mask> <d>")
+    parser.add_argument("--pos_word", type=str, default=" relevant")
+    parser.add_argument("--neg_word", type=str, default=" irrelevant")
+    parser.add_argument("--soft_prompt", action="store_true")
 
     parser.add_argument("--max_steps", type=int)
 
@@ -567,6 +574,19 @@ def main():
         args.tb = None
 
     args.model = args.model.lower()
+    tokenizer = None
+
+    if args.task.startswith("prompt"):
+        tokenizer = AutoTokenizer.from_pretrained(args.vocab)
+        pos_word_id = tokenizer(args.pos_word, add_special_tokens=False)["input_ids"]
+        neg_word_id = tokenizer(args.neg_word, add_special_tokens=False)["input_ids"]
+        print(pos_word_id, neg_word_id)
+        if len(neg_word_id) > 1 or len(pos_word_id) > 1:
+            raise ValueError("Label words longer than 1 after tokenization")
+        pos_word_id = pos_word_id[0]
+        neg_word_id = neg_word_id[0]
+        # tokenizer.add_tokens(["[SP1]", "[SP2]", "[SP3]", "[SP4]"], special_tokens=True)  # For continuous prompt
+
     if args.model=="t5":
         tokenizer = AutoTokenizer.from_pretrained(args.vocab)
         logger.info('reading training data...')
@@ -590,16 +610,8 @@ def main():
                 task=args.task,
             )
     elif args.model == 'bert':
-        tokenizer = AutoTokenizer.from_pretrained(args.vocab)
-        if args.task.startswith("prompt"):
-            pos_word_id = tokenizer(args.pos_word, add_special_tokens=False)["input_ids"]
-            neg_word_id = tokenizer(args.neg_word, add_special_tokens=False)["input_ids"]
-            print(pos_word_id, neg_word_id)
-            if len(neg_word_id) > 1 or len(pos_word_id) > 1:
-                raise ValueError("Label words longer than 1 after tokenization")
-            pos_word_id = pos_word_id[0]
-            neg_word_id = neg_word_id[0]
-            tokenizer.add_tokens(["[SP1]", "[SP2]", "[SP3]", "[SP4]"], special_tokens=True)  # For continuous prompt
+        if tokenizer is None:
+            tokenizer = AutoTokenizer.from_pretrained(args.vocab)
         logger.info('reading training data...')
         if args.maxp:
             train_set = om.data.datasets.BertMaxPDataset(
@@ -645,16 +657,8 @@ def main():
                template=args.template
             )
     elif args.model == 'roberta':
-        tokenizer = AutoTokenizer.from_pretrained(args.vocab)
-        if args.task.startswith("prompt"):
-            pos_word_id = tokenizer(args.pos_word, add_special_tokens=False)["input_ids"]
-            neg_word_id = tokenizer(args.neg_word, add_special_tokens=False)["input_ids"]
-            print(pos_word_id, neg_word_id)
-            if len(neg_word_id) > 1 or len(pos_word_id) > 1:
-                raise ValueError("Label words longer than 1 after tokenization")
-            pos_word_id = pos_word_id[0]
-            neg_word_id = neg_word_id[0]
-            tokenizer.add_tokens(["[SP1]", "[SP2]", "[SP3]", "[SP4]"], special_tokens=True)
+        if tokenizer is None:
+            tokenizer = AutoTokenizer.from_pretrained(args.vocab)
         print('reading training data...')
         train_set = om.data.datasets.RobertaDataset(
             dataset=args.train,
@@ -735,6 +739,7 @@ def main():
             task=args.task
         )
 
+
     if args.local_rank != -1:
         # train_sampler = DistributedSampler(train_set, args.world_size, args.local_rank)
         train_sampler = DistributedSampler(train_set)
@@ -789,9 +794,11 @@ def main():
                     mode=args.mode,
                     task=args.task,
                     pos_word_id=pos_word_id,
-                    neg_word_id=neg_word_id
+                    neg_word_id=neg_word_id,
+                    soft_prompt=args.soft_prompt
                 )
                 model._model.resize_token_embeddings(len(tokenizer))
+                # model._model.embeddings.word_embeddings.weight[-100, :] = model._model.embeddings.word_embeddings.weight[-100, :]
             else:
                 model = om.models.Bert(
                     pretrained=args.pretrain,
@@ -934,6 +941,9 @@ def main():
         m_optim = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr)
     elif args.optimizer.lower() == 'adamw':
         m_optim = AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr)
+        # print(m_optim.param_groups)
+    # from IPython import embed
+    # embed()
 
     if args.local_rank == -1:
         m_scheduler = get_linear_schedule_with_warmup(m_optim, num_warmup_steps=args.n_warmup_steps, num_training_steps=len(train_set)*args.epoch//args.batch_size if args.max_steps is None else args.max_steps)

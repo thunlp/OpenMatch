@@ -27,8 +27,8 @@ class RobertaDataset(Dataset):
         self._seq_max_len = query_max_len + doc_max_len + 4
         self._max_input = max_input
         self._task = task
-        if self._seq_max_len > 512:
-            raise ValueError('query_max_len + doc_max_len + 4 > 512.')
+        # if self._seq_max_len > 512:
+        #     raise ValueError('query_max_len + doc_max_len + 4 > 512.')
         
         if self._task.startswith("prompt"):
             assert template is not None
@@ -146,19 +146,19 @@ class RobertaDataset(Dataset):
                 doc_id = [item['doc_id'] for item in batch]
                 label = [item['label'] for item in batch]
                 mask_pos = torch.tensor([item["mask_pos"] for item in batch])
-                retrieval_score = torch.tensor([item['retrieval_score'] for item in batch])
+                # retrieval_score = torch.tensor([item['retrieval_score'] for item in batch])
                 input_ids = torch.tensor([item['input_ids'] for item in batch])
                 input_mask = torch.tensor([item['attention_mask'] for item in batch])
-                return {'query_id': query_id, 'doc_id': doc_id, 'label': label, 'retrieval_score': retrieval_score, "mask_pos": mask_pos, 
+                return {'query_id': query_id, 'doc_id': doc_id, 'label': label,  "mask_pos": mask_pos, 
                         'input_ids': input_ids, 'input_mask': input_mask}
             else:
                 query_id = [item['query_id'] for item in batch]
                 doc_id = [item['doc_id'] for item in batch]
                 label = [item['label'] for item in batch]
-                retrieval_score = torch.tensor([item['retrieval_score'] for item in batch])
+                # retrieval_score = torch.tensor([item['retrieval_score'] for item in batch])
                 input_ids = torch.tensor([item['input_ids'] for item in batch])
                 input_mask = torch.tensor([item['attention_mask'] for item in batch])
-                return {'query_id': query_id, 'doc_id': doc_id, 'label': label, 'retrieval_score': retrieval_score,
+                return {'query_id': query_id, 'doc_id': doc_id, 'label': label, 
                         'input_ids': input_ids, 'input_mask': input_mask}
         elif self._mode == 'test':
             if self._task.startswith("prompt"):
@@ -222,11 +222,25 @@ class RobertaDataset(Dataset):
             elif self._task == "prompt_classification":
                 doc = example["doc"].strip()
                 text = self._template.replace("<q>", example["query"]).replace("<d>", doc).replace("[MASK]", "<mask>")
-                tokenizer_output = self._tokenizer(text, padding="max_length", truncation=True, max_length=512)
-                input_ids = tokenizer_output["input_ids"]
+                if text.startswith("[SP"):
+                    pos_end = text.find("]")
+                    num = int(text[3:pos_end])
+                    # print("num:", num)
+                    tokenizer_output = self._tokenizer(text, padding="max_length", truncation=True, max_length=512-num)
+                    input_ids = tokenizer_output.input_ids
+                    attention_mask = tokenizer_output.attention_mask
+                    input_ids = [input_ids[0]] + [-x-1 for x in range(num)] + input_ids[1:]
+                    attention_mask = [attention_mask[0]] + [1] * num + attention_mask[1:]
+                    # print(input_ids)
+                    # print(tokenizer_output)
+                    # input()
+                else:
+                    tokenizer_output = self._tokenizer(text, padding="max_length", truncation=True, max_length=512)
+                    input_ids = tokenizer_output.input_ids
+                    attention_mask = tokenizer_output.attention_mask
                 mask_pos = input_ids.index(self._tokenizer.mask_token_id)
-                output = {"label": example["label"], "mask_pos": mask_pos}
-                output.update(tokenizer_output)
+                output = {"input_ids": input_ids, "attention_mask": attention_mask, "label": example["label"], "mask_pos": mask_pos}
+                # output.update(tokenizer_output)
                 return output
             else:
                 raise ValueError('Task must be `ranking` or `classification`.')
@@ -234,26 +248,54 @@ class RobertaDataset(Dataset):
             if self._task.startswith("prompt"):
                 doc = example["doc"].strip()
                 text = self._template.replace("<q>", example["query"]).replace("<d>", doc).replace("[MASK]", "<mask>")
-                tokenizer_output = self._tokenizer(text, padding="max_length", truncation=True, max_length=512)
-                input_ids = tokenizer_output["input_ids"]
+                if text.startswith("[SP"):
+                    pos_end = text.find("]")
+                    num = int(text[3:pos_end])
+                    # print("num:", num)
+                    tokenizer_output = self._tokenizer(text, padding="max_length", truncation=True, max_length=512-num)
+                    input_ids = tokenizer_output.input_ids
+                    attention_mask = tokenizer_output.attention_mask
+                    input_ids = [input_ids[0]] + [-x-1 for x in range(num)] + input_ids[1:]
+                    attention_mask = [attention_mask[0]] + [1] * num + attention_mask[1:]
+                    # print(input_ids)
+                    # print(tokenizer_output)
+                    # input()
+                else:
+                    tokenizer_output = self._tokenizer(text, padding="max_length", truncation=True, max_length=512)
+                    input_ids = tokenizer_output.input_ids
+                    attention_mask = tokenizer_output.attention_mask
                 mask_pos = input_ids.index(self._tokenizer.mask_token_id)
-                output = {"label": example["label"], "mask_pos": mask_pos, 'query_id': example['query_id'], 'doc_id': example['doc_id'], 'retrieval_score': example['retrieval_score']}
-                output.update(tokenizer_output)
+                output = {"input_ids": input_ids, "attention_mask": attention_mask, "label": example["label"], "mask_pos": mask_pos, 'query_id': example['query_id'], 'doc_id': example['doc_id']}
+                # output.update(tokenizer_output)
                 return output
             else:
                 tokenizer_output = self._tokenizer(example["query"], example["doc"], padding="max_length", truncation="only_second", max_length=512)
-                output = {'query_id': example['query_id'], 'doc_id': example['doc_id'], 'label': example['label'], 'retrieval_score': example['retrieval_score']}
+                output = {'query_id': example['query_id'], 'doc_id': example['doc_id'], 'label': example['label']}
                 output.update(tokenizer_output)
                 return output
         elif self._mode == 'test':
             if self._task.startswith("prompt"):
                 doc = example["doc"].strip()
                 text = self._template.replace("<q>", example["query"]).replace("<d>", doc).replace("[MASK]", "<mask>")
-                tokenizer_output = self._tokenizer(text, padding="max_length", truncation=True, max_length=512)
-                input_ids = tokenizer_output["input_ids"]
+                if text.startswith("[SP"):
+                    pos_end = text.find("]")
+                    num = int(text[3:pos_end])
+                    # print("num:", num)
+                    tokenizer_output = self._tokenizer(text, padding="max_length", truncation=True, max_length=512-num)
+                    input_ids = tokenizer_output.input_ids
+                    attention_mask = tokenizer_output.attention_mask
+                    input_ids = [input_ids[0]] + [-x-1 for x in range(num)] + input_ids[1:]
+                    attention_mask = [attention_mask[0]] + [1] * num + attention_mask[1:]
+                    # print(input_ids)
+                    # print(tokenizer_output)
+                    # input()
+                else:
+                    tokenizer_output = self._tokenizer(text, padding="max_length", truncation=True, max_length=512)
+                    input_ids = tokenizer_output.input_ids
+                    attention_mask = tokenizer_output.attention_mask
                 mask_pos = input_ids.index(self._tokenizer.mask_token_id)
-                output = {"mask_pos": mask_pos, 'query_id': example['query_id'], 'doc_id': example['doc_id'], 'retrieval_score': example['retrieval_score']}
-                output.update(tokenizer_output)
+                output = {"input_ids": input_ids, "attention_mask": attention_mask, "mask_pos": mask_pos, 'query_id': example['query_id'], 'doc_id': example['doc_id'], 'retrieval_score': example['retrieval_score']}
+                # output.update(tokenizer_output)
                 return output
             else:
                 tokenizer_output = self._tokenizer(example["query"], example["doc"], padding="max_length", truncation="only_second", max_length=512)

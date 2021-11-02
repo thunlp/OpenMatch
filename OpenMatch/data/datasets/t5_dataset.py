@@ -82,7 +82,7 @@ class t5Dataset(Dataset):
             label=self._tokenizer(label_text).input_ids
             input_ids.update({"labels":label})
             #tokenizer_output = self._tokenizer(example["query"], example["doc"], padding="max_length", truncation="only_second", max_length=512)
-            output = {'query_id': example['query_id'], 'doc_id': example['doc_id'], 'label': example['label'], 'retrieval_score': example['retrieval_score']}
+            output = {'query_id': example['query_id'], 'doc_id': example['doc_id'], 'label': example['label']}
             output.update(input_ids)
             #output : [qid,did,label,label,rs,attention_masks,input_ids,labels]
             return output
@@ -116,11 +116,11 @@ class t5Dataset(Dataset):
             query_id = [item['query_id'] for item in batch]
             doc_id = [item['doc_id'] for item in batch]
             label = torch.tensor([item['label'] for item in batch])
-            retrieval_score = [item['retrieval_score'] for item in batch]
+            # retrieval_score = [item['retrieval_score'] for item in batch]
             input_ids = torch.tensor([item['input_ids'] for item in batch])
             labels = torch.tensor([item['labels'] for item in batch])
             attention_mask = torch.tensor([item['attention_mask'] for item in batch])
-            return {'query_id': query_id, 'doc_id': doc_id, 'label': label, 'retrieval_score': retrieval_score,
+            return {'query_id': query_id, 'doc_id': doc_id, 'label': label, 
                     'input_ids': input_ids, 'labels': labels, 'attention_mask': attention_mask}
         elif self._mode == 'test':
             query_id = [item['query_id'] for item in batch]

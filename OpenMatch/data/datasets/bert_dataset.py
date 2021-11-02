@@ -161,21 +161,19 @@ class BertDataset(Dataset):
                 doc_id = [item['doc_id'] for item in batch]
                 label = [item['label'] for item in batch]
                 mask_pos = torch.tensor([item["mask_pos"] for item in batch])
-                retrieval_score = torch.tensor([item['retrieval_score'] for item in batch])
                 input_ids = torch.tensor([item['input_ids'] for item in batch])
                 segment_ids = torch.tensor([item['token_type_ids'] for item in batch])
                 input_mask = torch.tensor([item['attention_mask'] for item in batch])
-                return {'query_id': query_id, 'doc_id': doc_id, 'label': label, 'retrieval_score': retrieval_score, "mask_pos": mask_pos, 
+                return {'query_id': query_id, 'doc_id': doc_id, 'label': label, "mask_pos": mask_pos, 
                         'input_ids': input_ids, 'segment_ids': segment_ids, 'input_mask': input_mask}
             else:
                 query_id = [item['query_id'] for item in batch]
                 doc_id = [item['doc_id'] for item in batch]
                 label = [item['label'] for item in batch]
-                retrieval_score = torch.tensor([item['retrieval_score'] for item in batch])
                 input_ids = torch.tensor([item['input_ids'] for item in batch])
                 segment_ids = torch.tensor([item['token_type_ids'] for item in batch])
                 input_mask = torch.tensor([item['attention_mask'] for item in batch])
-                return {'query_id': query_id, 'doc_id': doc_id, 'label': label, 'retrieval_score': retrieval_score,
+                return {'query_id': query_id, 'doc_id': doc_id, 'label': label, 
                         'input_ids': input_ids, 'segment_ids': segment_ids, 'input_mask': input_mask}
         elif self._mode == 'test':
             if self._task.startswith("prompt"):
@@ -267,7 +265,14 @@ class BertDataset(Dataset):
                 doc = example["doc"].strip()
                 text = self._template.replace("<q>", example["query"]).replace("<d>", doc)
                 # print(text)
-                input_ids = self._tokenizer.encode(text)[:512]
+                input_ids, segment_ids, input_mask = [], [], []
+                if text.startswith("[SP"):
+                    pos_end = text.find("]", start=0)
+                    num = int(text[3:pos_end])
+                    input_ids.extend([-x-1 for x in range(num)])
+                    input_ids.extend(self._tokenizer.encode(text[pos_end:])[:512 - len(input_ids)])
+                else:
+                    input_ids.extend(self._tokenizer.encode(text)[:512 - len(input_ids)])
                 segment_ids = [0] * len(input_ids)
                 input_mask = [1] * len(input_ids)
 
@@ -287,7 +292,14 @@ class BertDataset(Dataset):
             if self._task.startswith("prompt"):
                 doc = example["doc"].strip()
                 text = self._template.replace("<q>", example["query"]).replace("<d>", doc)
-                input_ids = self._tokenizer.encode(text)[:512]
+                input_ids, segment_ids, input_mask = [], [], []
+                if text.startswith("[SP"):
+                    pos_end = text.find("]", start=0)
+                    num = int(text[3:pos_end])
+                    input_ids.extend([-x-1 for x in range(num)])
+                    input_ids.extend(self._tokenizer.encode(text[pos_end:])[:512 - len(input_ids)])
+                else:
+                    input_ids.extend(self._tokenizer.encode(text)[:512 - len(input_ids)])
                 segment_ids = [0] * len(input_ids)
                 input_mask = [1] * len(input_ids)
 
@@ -299,17 +311,24 @@ class BertDataset(Dataset):
                 assert len(input_ids) == len(input_mask) == len(segment_ids) == 512
                 mask_pos = input_ids.index(self._tokenizer.mask_token_id)
                 return {"input_ids": input_ids, "token_type_ids": segment_ids, "attention_mask": input_mask, "mask_pos": mask_pos, 
-                        'query_id': example['query_id'], 'doc_id': example['doc_id'], 'label': example['label'], 'retrieval_score': example['retrieval_score']}
+                        'query_id': example['query_id'], 'doc_id': example['doc_id'], 'label': example['label']}
             else:
                 tokenizer_output = self._tokenizer(example["query"], example["doc"], padding="max_length", truncation="only_second", max_length=512)
-                output = {'query_id': example['query_id'], 'doc_id': example['doc_id'], 'label': example['label'], 'retrieval_score': example['retrieval_score']}
+                output = {'query_id': example['query_id'], 'doc_id': example['doc_id'], 'label': example['label']}
                 output.update(tokenizer_output)
                 return output
         elif self._mode == 'test':
             if self._task.startswith("prompt"):
                 doc = example["doc"].strip()
                 text = self._template.replace("<q>", example["query"]).replace("<d>", doc)
-                input_ids = self._tokenizer.encode(text)[:512]
+                input_ids, segment_ids, input_mask = [], [], []
+                if text.startswith("[SP"):
+                    pos_end = text.find("]", start=0)
+                    num = int(text[3:pos_end])
+                    input_ids.extend([-x-1 for x in range(num)])
+                    input_ids.extend(self._tokenizer.encode(text[pos_end:])[:512 - len(input_ids)])
+                else:
+                    input_ids.extend(self._tokenizer.encode(text)[:512 - len(input_ids)])
                 segment_ids = [0] * len(input_ids)
                 input_mask = [1] * len(input_ids)
 
