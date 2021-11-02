@@ -105,7 +105,10 @@ class BertPrompt(nn.Module):
         masked_token_pos = torch.squeeze(masked_token_pos, 3)
         masked_token_logits = torch.gather(output, 1, masked_token_pos)
         # print(masked_token_logits.shape)
-        masked_token_logits = masked_token_logits.squeeze()  # batch_size * vocab_size
+        #masked_token_logits = masked_token_logits.squeeze()  # batch_size * vocab_size
+        #rel_and_irrel_logits = masked_token_logits[:, [self._neg_word_id, self._pos_word_id]]
+
+        masked_token_logits=masked_token_logits.reshape(-1,vocab_size)
         rel_and_irrel_logits = masked_token_logits[:, [self._neg_word_id, self._pos_word_id]]
         # print()
         # rel_and_irrel_logits = F.softmax(rel_and_irrel_logits, dim=1)
