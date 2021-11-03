@@ -256,9 +256,10 @@ Thanks to all the people who contributed to OpenMatch!
 ## Citation
 ```
 @inproceedings{openmatch,
-author = {Liu, Zhenghao and Zhang, Kaitao and Xiong, Chenyan and Liu, Zhiyuan and Sun, Maosong},
-title = {OpenMatch: An Open Source Library for Neu-IR Research},
-year = {2021},
-url = {https://doi.org/10.1145/3404835.3462789},
-pages = {2531–2535}
+  author = {Liu, Zhenghao and Zhang, Kaitao and Xiong, Chenyan and Liu, Zhiyuan and Sun, Maosong},
+  title = {OpenMatch: An Open Source Library for Neu-IR Research},
+  year = {2021},
+  url = {https://doi.org/10.1145/3404835.3462789},
+  pages = {2531–2535}
+}
 ```
