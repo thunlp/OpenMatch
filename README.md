@@ -258,6 +258,7 @@ Thanks to all the people who contributed to OpenMatch!
 @inproceedings{openmatch,
   author = {Liu, Zhenghao and Zhang, Kaitao and Xiong, Chenyan and Liu, Zhiyuan and Sun, Maosong},
   title = {OpenMatch: An Open Source Library for Neu-IR Research},
+  booktitle = {Proceedings of SIGIR},
   year = {2021},
   url = {https://doi.org/10.1145/3404835.3462789},
   pages = {2531–2535}
