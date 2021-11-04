@@ -18,21 +18,21 @@ class t5Dataset(Dataset):
         doc_max_len: int = 250,
         max_input: int = 1280000,
         task: str = 'classification',
-        neg_word: str='Fal',
-        pos_word: str='True'
+        isv11: bool=False
     ) -> None:
-    
-        self._label_mapping=[neg_word,pos_word]
+        self._label_mapping=[6136,1176]
         self._dataset = dataset
         self._tokenizer = tokenizer
+        #self._tokenizer.sep_token='</s>'
         self._mode = mode
         self._query_max_len = query_max_len
         self._doc_max_len = doc_max_len
         self._seq_max_len = query_max_len + doc_max_len + 11
         self._max_input = max_input
         self._task = task
-        # if self._seq_max_len > 512:
-        #     raise ValueError('query_max_len + doc_max_len + 11 > 512.')
+        self.isv11=isv11
+        if self._seq_max_len > 384:
+            raise ValueError('query_max_len + doc_max_len + 11 > 384.')
 
         
         if isinstance(self._dataset, str):
@@ -67,34 +67,56 @@ class t5Dataset(Dataset):
         if self._mode == 'train':
             if self._task == 'classification':
                 text='Query: '+example["query"]+' Document: '+example["doc"]+' Relevant: '
-                label_text=self._label_mapping[example['label']]
-                output=self._tokenizer(text,padding="max_length",truncation=True,max_length=512)
-                label=self._tokenizer(label_text).input_ids
-                output.update({'labels':label,'label':example['label']})
-                #dict [input_ids,labels,attention_masks,label]
+                #text=example['query']+' </s> '+example['doc']
+                #label_text=self._label_mapping[example['label']]
+                #label_text="<pad>"
+                output=self._tokenizer(text,padding="max_length",truncation=True,max_length=384)
+                #label=self._tokenizer(label_text).input_ids
+                if self.isv11:
+                    label=self._label_mapping[example['label']]
+                else:
+                    label=example['label']
+                output.update({'labels':[0],'label':label})
                 return output
             else:
                 raise ValueError('Task must be  `classification`.')
         elif self._mode == 'dev':
             text='Query: '+example["query"]+' Document: '+example["doc"]+' Revelant: '
-            label_text=self._label_mapping[0]
-            input_ids=self._tokenizer(text,padding="max_length",truncation=True,max_length=512)
-            label=self._tokenizer(label_text).input_ids
-            input_ids.update({"labels":label})
-            #tokenizer_output = self._tokenizer(example["query"], example["doc"], padding="max_length", truncation="only_second", max_length=512)
-            output = {'query_id': example['query_id'], 'doc_id': example['doc_id'], 'label': example['label']}
+            #text=example['query']+' </s> '+example['doc']
+            #label_text=self._label_mapping[example['label']]
+            #label_text="<pad>"
+            input_ids=self._tokenizer(text,padding="max_length",truncation=True,max_length=384)
+            #label=self._tokenizer(label_text).input_ids
+            
+            input_ids.update({"labels":[0]})
+            #tokenizer_output = self._tokenizer(example["query"], example["doc"], padding="max_length", truncation="only_second", max_length=384)
+            output = {'query_id': example['query_id'], 'doc_id': example['doc_id']}
             output.update(input_ids)
             #output : [qid,did,label,label,rs,attention_masks,input_ids,labels]
+            if self.isv11:
+                label=self._label_mapping[example['label']]
+            else:
+                label=example['label']
+            output.update({'label':label})
             return output
         elif self._mode == 'test':
             text='Query: '+example["query"]+' Document: '+example["doc"]+' Revelant: '
-            label_text=self._label_mapping[example['label']]
-            input_ids=self._tokenizer(text,padding="max_length",truncation=True,max_length=512)
-            label=self._tokenizer(label_text).input_ids
-            input_ids.update({"labels":label})
-            output = {'query_id': example['query_id'], 'doc_id': example['doc_id'], 'retrieval_score': example['retrieval_score']}
+            #text=example['query']+' </s> '+example['doc']
+            #label_text=self._label_mapping[example['label']]
+            #label_text="<pad>"
+            input_ids=self._tokenizer(text,padding="max_length",truncation=True,max_length=384)
+            #label=self._tokenizer(label_text).input_ids
+            
+            input_ids.update({"labels":[0]})
+            #tokenizer_output = self._tokenizer(example["query"], example["doc"], padding="max_length", truncation="only_second", max_length=384)
+            output = {'query_id': example['query_id'], 'doc_id': example['doc_id']}
             output.update(input_ids)
-            #output :[qid,did,rs,attention_mask,input_ids,labels]
+            #output : [qid,did,label,label,rs,attention_masks,input_ids,labels]
+            if self.isv11:
+                label=self._label_mapping[example['label']]
+            else:
+                label=example['label']
+            output.update({'label':label})
             return output
         else:
             raise ValueError('Mode must be `train`, `dev` or `test`.')
@@ -109,6 +131,7 @@ class t5Dataset(Dataset):
                 labels = torch.tensor([item['labels'] for item in batch])
                 attention_mask = torch.tensor([item['attention_mask'] for item in batch])
                 label = torch.tensor([item['label'] for item in batch])
+                
                 return {'input_ids': input_ids, 'labels': labels, 'attention_mask': attention_mask, 'label': label}
             else:
                 raise ValueError('Task must be  `classification`.')
@@ -116,20 +139,21 @@ class t5Dataset(Dataset):
             query_id = [item['query_id'] for item in batch]
             doc_id = [item['doc_id'] for item in batch]
             label = torch.tensor([item['label'] for item in batch])
-            # retrieval_score = [item['retrieval_score'] for item in batch]
+            
             input_ids = torch.tensor([item['input_ids'] for item in batch])
             labels = torch.tensor([item['labels'] for item in batch])
             attention_mask = torch.tensor([item['attention_mask'] for item in batch])
-            return {'query_id': query_id, 'doc_id': doc_id, 'label': label, 
+            return {'query_id': query_id, 'doc_id': doc_id, 'label': label,
                     'input_ids': input_ids, 'labels': labels, 'attention_mask': attention_mask}
         elif self._mode == 'test':
             query_id = [item['query_id'] for item in batch]
             doc_id = [item['doc_id'] for item in batch]
-            retrieval_score = [item['retrieval_score'] for item in batch]
+            label = torch.tensor([item['label'] for item in batch])
+            
             input_ids = torch.tensor([item['input_ids'] for item in batch])
             labels = torch.tensor([item['labels'] for item in batch])
             attention_mask = torch.tensor([item['attention_mask'] for item in batch])
-            return {'query_id': query_id, 'doc_id': doc_id, 'retrieval_score': retrieval_score,
+            return {'query_id': query_id, 'doc_id': doc_id, 'label': label,
                     'input_ids': input_ids, 'labels': labels, 'attention_mask': attention_mask}
         else:
             raise ValueError('Mode must be `train`, `dev` or `test`.')

@@ -7,9 +7,12 @@ class t5(nn.Module):
         self.config=T5Config.from_pretrained(checkpoint)       
         self.t5=T5ForConditionalGeneration.from_pretrained(checkpoint,config=self.config)      
     
-    def forward(self,input_ids,attention_mask,labels,label):       
-        output=self.t5(input_ids=input_ids,labels=labels,attention_mask=attention_mask,return_dict=True)        
+    def forward(self,input_ids,attention_mask,labels,label,isv11):
+        output=self.t5(input_ids=input_ids,decoder_input_ids=labels,attention_mask=attention_mask,return_dict=True)
         logits=output.logits
-        batch_score=logits[:,0,[6136,1176]]
+        if not isv11:
+            batch_score=logits[:,0,[6136,1176]] 
+        else:
+            batch_score=logits[:,0,:] 
         return batch_score
 

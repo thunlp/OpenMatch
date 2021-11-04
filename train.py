@@ -38,7 +38,8 @@ def dev(args, model, metric, dev_loader, device):
                 batch_score=model(input_ids=dev_batch['input_ids'].to(device), 
                 attention_mask=dev_batch['attention_mask'].to(device),
                 labels= dev_batch['labels'].to(device),
-                label=dev_batch['label'].to(device)
+                label=dev_batch['label'].to(device),
+                isv11=False
                 )
             elif args.model == 'bert':
                 if args.task.startswith("prompt"):
@@ -309,7 +310,8 @@ def train(args, model, loss_fn, m_optim, m_scheduler, metric, train_loader, dev_
                         input_ids=train_batch['input_ids'].to(device), 
                         attention_mask=train_batch['attention_mask'].to(device), 
                         labels=train_batch['labels'].to(device),
-                        label=train_batch['label'].to(device)
+                        label=train_batch['label'].to(device),
+                        isv11=args.t5v11
                         )
             elif args.model == 'bert':
                 if args.task == 'ranking':
@@ -560,6 +562,7 @@ def main():
     parser.add_argument("--pos_word", type=str, default=" relevant")
     parser.add_argument("--neg_word", type=str, default=" irrelevant")
     parser.add_argument("--soft_prompt", action="store_true")
+    parser.add_argument("--t5v11",type=bool,default=False)
 
     parser.add_argument("--max_steps", type=int)
 
@@ -598,6 +601,7 @@ def main():
                 doc_max_len=args.max_doc_len,
                 max_input=args.max_input,
                 task=args.task,
+                isv11=args.t5v11
             )
         logger.info('reading dev data...')
         dev_set = om.data.datasets.t5Dataset(
@@ -608,6 +612,7 @@ def main():
                 doc_max_len=args.max_doc_len,
                 max_input=args.max_input,
                 task=args.task,
+                isv11=args.t5v11
             )
     elif args.model == 'bert':
         if tokenizer is None:
