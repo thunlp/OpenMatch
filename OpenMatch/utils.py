@@ -19,7 +19,7 @@ def check_dir(path):
     return path
 
 def save_trec(rst_file, rst_dict):
-    with open(rst_file, 'w') as writer:
+    with open(rst_file, 'a') as writer:
         for q_id, scores in rst_dict.items():
             res = sorted(scores.items(), key=lambda x: x[1][0], reverse=True)
             for rank, value in enumerate(res):

@@ -187,7 +187,8 @@ def main():
         batch_size=args.batch_size,
         shuffle=False,#
         sampler=test_sampler,#
-        num_workers=20
+        num_workers=20,
+        pin_momery=False
     )
     
     dist.barrier()
@@ -341,7 +342,7 @@ def main():
 
     
     om.utils.save_trec(args.res, rst_dict)
-
+    dist.barrier()
 def clean_up():
     dist.destroy_process_group()
 
