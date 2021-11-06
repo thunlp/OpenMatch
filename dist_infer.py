@@ -187,8 +187,8 @@ def main():
         batch_size=args.batch_size,
         shuffle=False,#
         sampler=test_sampler,#
-        num_workers=20,
-        pin_momery=False
+        num_workers=32,
+        pin_memory=False
     )
     
     dist.barrier()

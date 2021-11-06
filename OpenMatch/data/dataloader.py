@@ -14,6 +14,7 @@ class DataLoader(DataLoader):
         shuffle: str = False,
         num_workers: int = 0,
         sampler = None,
+        pin_memory=False
     ) -> None:
         super().__init__(
             dataset = dataset,
@@ -22,4 +23,5 @@ class DataLoader(DataLoader):
             num_workers = num_workers,
             collate_fn = dataset.collate,
             sampler = sampler,
+            pin_memory=pin_memory
         )

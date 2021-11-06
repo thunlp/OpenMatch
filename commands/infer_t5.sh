@@ -1,6 +1,6 @@
 set -ex
 export OMP_NUM_THREADS=1
-export CUDA_VISIBLE_DEVICES=0,1,2,3
+export CUDA_VISIBLE_DEVICES=0,2,3,4
 ckpt="t5-large"
 Q=5
 STEP=250

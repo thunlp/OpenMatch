@@ -480,23 +480,33 @@ def train(args, model, loss_fn, m_optim, m_scheduler, metric, train_loader, dev_
                         if args.tb is not None:
                             args.tb.add_scalar("dev", mes, global_step + 1)
 
-                        best_mes = mes if mes >= best_mes else best_mes
-                        logger.info('save_model at step {}'.format(global_step+1))
                         if not os.path.exists(args.save):
-                                os.makedirs(args.save)
-                        if hasattr(model, "module"):
-                            torch.save(model.module.state_dict(), args.save + "_step-{}.bin".format(global_step+1))
-                        else:
+                            os.makedirs(args.save)
+                        if mes > best_mes:
+                            best_mes=mes
+                            ls=os.listdir(args.save)
+                            for i in ls:
+                                item_path=os.path.join(args.save,i)
+                                print("remove {}".format(item_path))
+                                os.remove(item_path)
+                            if hasattr(model, "module"):
+                                torch.save(model.module.state_dict(), args.save + "_step-{}.bin".format(global_step+1))
+                            else:
                             # if args.soft_prompt:
                             #     model.save_prompts(args.save + "_prompts_step-{}.bin".format(global_step+1))
                             # else:
-                            torch.save(model.state_dict(), args.save + "_step-{}.bin".format(global_step+1))
+                                torch.save(model.state_dict(), args.save + "_step-{}.bin".format(global_step+1))
+                        
+                            logger.info('save_model at step {}'.format(global_step+1))
+                        
+                        
                         # if args.n_gpu > 1:
                         #     torch.save(model.module.state_dict(), args.save + "_step-{}.bin".format(global_step+1))
                         # else:
                         #     torch.save(model.state_dict(), args.save + "_step-{}.bin".format(global_step+1))
+                        
                         logger.info("global step: {}, messure: {}, best messure: {}".format(global_step+1, mes, best_mes))
-                
+                        
                 global_step += 1
 
                 if args.max_steps is not None and global_step == args.max_steps:
@@ -516,7 +526,12 @@ def train(args, model, loss_fn, m_optim, m_scheduler, metric, train_loader, dev_
         dist.barrier()
     # print("Finish training. {}".format(args.local_rank))
 
-
+def set_seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-task', type=str, default='ranking')
@@ -567,7 +582,7 @@ def main():
     parser.add_argument("--max_steps", type=int)
 
     args = parser.parse_args()
-
+    set_seed(13)
     set_dist_args(args) # get local cpu/gpu device
 
     if args.log_dir is not None:

@@ -164,19 +164,21 @@ class RobertaDataset(Dataset):
             if self._task.startswith("prompt"):
                 query_id = [item['query_id'] for item in batch]
                 doc_id = [item['doc_id'] for item in batch]
+                label = [item['label'] for item in batch]
                 mask_pos = torch.tensor([item["mask_pos"] for item in batch])
-                retrieval_score = torch.tensor([item['retrieval_score'] for item in batch])
+                # retrieval_score = torch.tensor([item['retrieval_score'] for item in batch])
                 input_ids = torch.tensor([item['input_ids'] for item in batch])
                 input_mask = torch.tensor([item['attention_mask'] for item in batch])
-                return {'query_id': query_id, 'doc_id': doc_id, 'retrieval_score': retrieval_score, "mask_pos": mask_pos, 
+                return {'query_id': query_id, 'doc_id': doc_id, 'label': label,  "mask_pos": mask_pos, 
                         'input_ids': input_ids, 'input_mask': input_mask}
             else:
                 query_id = [item['query_id'] for item in batch]
                 doc_id = [item['doc_id'] for item in batch]
-                retrieval_score = torch.tensor([item['retrieval_score'] for item in batch])
+                label = [item['label'] for item in batch]
+                # retrieval_score = torch.tensor([item['retrieval_score'] for item in batch])
                 input_ids = torch.tensor([item['input_ids'] for item in batch])
                 input_mask = torch.tensor([item['attention_mask'] for item in batch])
-                return {'query_id': query_id, 'doc_id': doc_id, 'retrieval_score': retrieval_score,
+                return {'query_id': query_id, 'doc_id': doc_id, 'label': label, 
                         'input_ids': input_ids, 'input_mask': input_mask}
         else:
             raise ValueError('Mode must be `train`, `dev` or `test`.')
@@ -294,12 +296,12 @@ class RobertaDataset(Dataset):
                     input_ids = tokenizer_output.input_ids
                     attention_mask = tokenizer_output.attention_mask
                 mask_pos = input_ids.index(self._tokenizer.mask_token_id)
-                output = {"input_ids": input_ids, "attention_mask": attention_mask, "mask_pos": mask_pos, 'query_id': example['query_id'], 'doc_id': example['doc_id'], 'retrieval_score': example['retrieval_score']}
+                output = {"input_ids": input_ids, "attention_mask": attention_mask, "label": example["label"], "mask_pos": mask_pos, 'query_id': example['query_id'], 'doc_id': example['doc_id']}
                 # output.update(tokenizer_output)
                 return output
             else:
                 tokenizer_output = self._tokenizer(example["query"], example["doc"], padding="max_length", truncation="only_second", max_length=512)
-                output = {'query_id': example['query_id'], 'doc_id': example['doc_id'], 'retrieval_score': example['retrieval_score']}
+                output = {'query_id': example['query_id'], 'doc_id': example['doc_id'], 'label': example['label']}
                 output.update(tokenizer_output)
                 return output
         else:
