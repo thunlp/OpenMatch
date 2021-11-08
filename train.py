@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.distributions import Categorical
-from transformers import T5ForConditionalGeneration
+from transformers import T5ForConditionalGeneration,Adafactor
 from transformers import AutoTokenizer, get_linear_schedule_with_warmup
 import OpenMatch as om
 from transformers import AdamW
