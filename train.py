@@ -31,7 +31,10 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 def dev(args, model, metric, dev_loader, device,tokenizer):
     rst_dict = {}
     for dev_batch in tqdm(dev_loader, disable=args.local_rank not in [-1, 0]):
-        query_id, doc_id, label = dev_batch['query_id'], dev_batch['doc_id'], dev_batch['raw_label']
+        if args.model=="t5":
+            query_id, doc_id, label = dev_batch['query_id'], dev_batch['doc_id'], dev_batch['label_id']
+        else:
+            query_id, doc_id, label = dev_batch['query_id'], dev_batch['doc_id'], dev_batch['label']
         with torch.no_grad():
             if args.original_t5:
                 batch_logits = model(                        
@@ -42,12 +45,9 @@ def dev(args, model, metric, dev_loader, device,tokenizer):
                     ).logits
                 batch_score=batch_logits[:,0,[6136,1176]]
                 #print(batch_score.shape)
-            elif args.model== 't5' or args.model=="simplet5":
+            elif args.model== 't5':
                 batch_score=model(input_ids=dev_batch['input_ids'].to(device), 
-                attention_mask=dev_batch['attention_mask'].to(device),
-                labels= dev_batch['labels'].to(device),
-                label=dev_batch['label'].to(device),
-                isv11=False
+                attention_mask=dev_batch['attention_mask'].to(device)
                 )
             elif args.model == 'bert':
                 if args.task.startswith("prompt"):
@@ -307,7 +307,10 @@ def train(args, model, loss_fn, m_optim, m_scheduler, metric, train_loader, dev_
         avg_loss = 0.0
         for step, train_batch in enumerate(train_loader):
             # print("hello?")
-            
+            if args.model=="t5":
+                label = train_batch['label_id']
+            else:
+                label = train_batch['label']
             sync_context = model.no_sync if (args.local_rank != -1 and (step+1) % args.gradient_accumulation_steps != 0) else nullcontext
             if args.original_t5:
                 with sync_context():
@@ -321,10 +324,7 @@ def train(args, model, loss_fn, m_optim, m_scheduler, metric, train_loader, dev_
                 with sync_context():
                     batch_score = model(
                         input_ids=train_batch['input_ids'].to(device), 
-                        attention_mask=train_batch['attention_mask'].to(device), 
-                        labels=train_batch['labels'].to(device),
-                        label=train_batch['label'].to(device),
-                        isv11=args.t5v11
+                        attention_mask=train_batch['attention_mask'].to(device)
                         )
             elif args.model == 'bert':
                 if args.task == 'ranking':
@@ -416,10 +416,10 @@ def train(args, model, loss_fn, m_optim, m_scheduler, metric, train_loader, dev_
                     if args.original_t5:
                         pass
                     elif args.ranking_loss == "bce":
-                        batch_loss = loss_fn(batch_score[:, 1], train_batch['label'].type(torch.FloatTensor).to(device))
+                        batch_loss = loss_fn(batch_score[:, 1], label.type(torch.FloatTensor).to(device))
                     else:
                         #print(train_batch['label'])
-                        batch_loss = loss_fn(batch_score, train_batch['label'].to(device))
+                        batch_loss = loss_fn(batch_score, label.to(device))
                     # print(train_batch['label'])
                     # input()
             elif args.task == "prompt_ranking":
@@ -577,7 +577,7 @@ def main():
     parser.add_argument("--pos_word", type=str, default=" relevant")
     parser.add_argument("--neg_word", type=str, default=" irrelevant")
     parser.add_argument("--soft_prompt", action="store_true")
-    #parser.add_argument("--t5v11",type=bool,default=False)
+    
     parser.add_argument("--original_t5", action="store_true")
     parser.add_argument("--max_steps", type=int)
 

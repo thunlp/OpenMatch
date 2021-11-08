@@ -49,9 +49,9 @@ class t5Dataset(Dataset):
             "labels": target_ids,
             "raw_label": raw_label,
             "query_id":example['query_id'],
-            "doc_id":example['doc_id']
+            "doc_id":example['doc_id'],
             # 'decoder_input_ids': [0], 
-            # 'label': example['label']
+            'label_id': example['label']
         }
         return output
 
@@ -75,4 +75,5 @@ class t5Dataset(Dataset):
         raw_label = [item["raw_label"] for item in batch]
         query_id=[item['query_id'] for item in batch]
         doc_id=[item['doc_id'] for item in batch]
-        return {'input_ids': input_ids, "attention_mask": attention_mask, 'labels': labels, "raw_label": raw_label,"query_id":query_id,"doc_id":doc_id}
+        label_id=torch.tensor([item['label_id'] for item in batch])
+        return {'input_ids': input_ids, "attention_mask": attention_mask, 'labels': labels, "raw_label": raw_label,"query_id":query_id,"doc_id":doc_id,"label_id":label_id}
