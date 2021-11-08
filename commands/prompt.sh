@@ -1,6 +1,6 @@
 
 set -ex
-export CUDA_VISIBLE_DEVICES=0,3,4,5
+export CUDA_VISIBLE_DEVICES=0,1,2,3
 export OMP_NUM_THREADS=1
 LR=5e-4
 EPOCH=300000
@@ -9,24 +9,24 @@ NEG_WORD=" irrelevant"
 POS_WORD=" relevant"
 
 MAX_STEPS=3000
-Q=50
+Q=1000
 NEG=1
 LOG_STEP=50
 EVAL_EVERY=50
-BATCH_SIZE=1
+BATCH_SIZE=8
 MODEL="roberta"
 ckpt="/data/private/yushi/pretrained_models/roberta-large"
 
-TYPE="soft"
+TYPE="test"
 python -m torch.distributed.launch \
 --nproc_per_node=4 \
---master_port=3009 \
+--master_port=3119 \
 train.py \
 -task prompt_classification \
 -model $MODEL \
 -qrels /data/private/yushi/collections/msmarco-passage/qrels.train.tsv \
 -train /data/private/huxiaomeng/promptir/dataset/msmarco/train/$Q-q-$NEG-n.jsonl \
--dev /data/private/huxiaomeng/promptir/dataset/msmarco/dev/50-q.jsonl  \
+-dev /data/private/huxiaomeng/promptir/dataset/msmarco/dev/500-q.jsonl  \
 -max_input 80000000 \
 -vocab $ckpt  \
 -pretrain $ckpt  \
@@ -49,6 +49,6 @@ train.py \
 --neg_word=" irrelevant"  \
 --template='[SP30] <q> <mask> <d>'  \
 --soft_prompt  \
--gradient_accumulation_steps 2
+-gradient_accumulation_steps 1
 
 

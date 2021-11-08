@@ -1,35 +1,35 @@
 set -ex
-export CUDA_VISIBLE_DEVICES=0,1,2,3
-LR=2e-5
+export CUDA_VISIBLE_DEVICES=7
+LR=1e-4
 
 MAX_STEPS=80000
 EPOCH=6
 
 Q='full'
 
-LOG_STEP=1000
-EVAL_EVERY=1000
+LOG_STEP=2000
+EVAL_EVERY=2000
 
-BATCH_SIZE=8
+BATCH_SIZE=1
 NEG=1
 
 
 ckpt="/home/huxiaomeng/t5v11large/"
 
 python -m torch.distributed.launch \
-         --nproc_per_node=4 \
+         --nproc_per_node=1 \
          --master_port=21227  \
-        train.py \
+        OpenMatch-prompt/train.py \
         -task classification  \
         -model t5  \
         -qrels /data/private/yushi/collections/msmarco-passage/qrels.train.tsv     \
         -train $Q-q-$NEG-n_msmarco_train.jsonl  \
         -max_input 80000000  \
-        -save /data/private/huxiaomeng/promptir/checkpoints/testt5v11/q$Q-n-$NEG/  \
+        -save /data/private/huxiaomeng/last_try_t5v11/ckpt/q$Q-n-$NEG/  \
         -dev dev/q500_msmarco_dev.jsonl   \
         -vocab $ckpt          \
         -pretrain $ckpt  \
-        -res /data/private/huxiaomeng/promptir/results/testt5v11/q$Q-n-$NEG.trec  \
+        -res /data/private/huxiaomeng/last_try_t5v11/results/q$Q-n-$NEG.trec  \
         -metric mrr_cut_10  \
         -max_query_len 76  \
         -max_doc_len 290  \
@@ -37,13 +37,14 @@ python -m torch.distributed.launch \
         -batch_size $BATCH_SIZE  \
         -lr $LR  \
         -eval_every $EVAL_EVERY  \
-        -optimizer adamw  \
+        -optimizer adafactor  \
         -dev_eval_batch_size 128  \
         -n_warmup_steps 30  \
         -logging_step $LOG_STEP  \
-        --log_dir=/data/private/huxiaomeng/promptir/logs/testt5v11/q$Q-n-$NEG/ \
+        --log_dir=/data/private/huxiaomeng/last_try_t5v11/logs/q$Q-n-$NEG/ \
         --max_steps=$MAX_STEPS \
-        --t5v11=True
+        --original_t5  \
+        -gradient_accumulation_steps 32
         
        
 

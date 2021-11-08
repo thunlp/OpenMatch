@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.distributions import Categorical
-
+from transformers import T5ForConditionalGeneration
 from transformers import AutoTokenizer, get_linear_schedule_with_warmup
 import OpenMatch as om
 from transformers import AdamW
@@ -28,13 +28,21 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 # writer = SummaryWriter(log_dir='logs')
 
-
-def dev(args, model, metric, dev_loader, device):
+def dev(args, model, metric, dev_loader, device,tokenizer):
     rst_dict = {}
     for dev_batch in tqdm(dev_loader, disable=args.local_rank not in [-1, 0]):
-        query_id, doc_id, label= dev_batch['query_id'], dev_batch['doc_id'], dev_batch['label']
+        query_id, doc_id, label = dev_batch['query_id'], dev_batch['doc_id'], dev_batch['raw_label']
         with torch.no_grad():
-            if args.model== 't5':
+            if args.original_t5:
+                batch_logits = model(                        
+                        input_ids=dev_batch['input_ids'].to(device), 
+                        attention_mask=dev_batch['attention_mask'].to(device), 
+                        labels=dev_batch["labels"].to(device),
+                        return_dict=True
+                    ).logits
+                batch_score=batch_logits[:,0,[6136,1176]]
+                #print(batch_score.shape)
+            elif args.model== 't5' or args.model=="simplet5":
                 batch_score=model(input_ids=dev_batch['input_ids'].to(device), 
                 attention_mask=dev_batch['attention_mask'].to(device),
                 labels= dev_batch['labels'].to(device),
@@ -61,15 +69,12 @@ def dev(args, model, metric, dev_loader, device):
             else:
                 batch_score, _ = model(dev_batch['query_idx'].to(device), dev_batch['query_mask'].to(device),
                                        dev_batch['doc_idx'].to(device), dev_batch['doc_mask'].to(device))
+            
             if args.task == 'classification' or args.task == "prompt_classification":
-                # print(batch_score)
-                # print(batch_score.shape)
                 batch_score = batch_score.softmax(dim=-1)[:, 1].squeeze(-1)
-                # print(batch_score)
-                # print(batch_score.shape)
-                # input()
             elif args.task == "prompt_ranking":
                 batch_score = batch_score[:, 0]
+            
             batch_score = batch_score.detach().cpu().tolist()
             for (q_id, d_id, b_s, l) in zip(query_id, doc_id, batch_score, label):
                 if q_id not in rst_dict:
@@ -301,10 +306,18 @@ def train(args, model, loss_fn, m_optim, m_scheduler, metric, train_loader, dev_
 
         avg_loss = 0.0
         for step, train_batch in enumerate(train_loader):
-            # print("Before: global step {}, rank {}".format(global_step, args.local_rank))
+            # print("hello?")
             
             sync_context = model.no_sync if (args.local_rank != -1 and (step+1) % args.gradient_accumulation_steps != 0) else nullcontext
-            if args.model == 't5':
+            if args.original_t5:
+                with sync_context():
+                    batch_loss = model(                        
+                        input_ids=train_batch['input_ids'].to(device), 
+                        attention_mask=train_batch['attention_mask'].to(device), 
+                        labels=train_batch["labels"].to(device),
+                        return_dict=True
+                    ).loss
+            elif args.model == 't5':
                 with sync_context():
                     batch_score = model(
                         input_ids=train_batch['input_ids'].to(device), 
@@ -384,7 +397,7 @@ def train(args, model, loss_fn, m_optim, m_scheduler, metric, train_loader, dev_
                                            train_batch['doc_idx'].to(device), train_batch['doc_mask'].to(device))
                 else:
                     raise ValueError('Task must be `ranking` or `classification`.')
-
+            
             if args.task == 'ranking':
                 with sync_context():
                     if args.ranking_loss == 'margin_loss':
@@ -400,9 +413,12 @@ def train(args, model, loss_fn, m_optim, m_scheduler, metric, train_loader, dev_
             elif args.task == 'classification' or args.task == "prompt_classification":
                 with sync_context():
                     # print(batch_score)
-                    if args.ranking_loss == "bce":
+                    if args.original_t5:
+                        pass
+                    elif args.ranking_loss == "bce":
                         batch_loss = loss_fn(batch_score[:, 1], train_batch['label'].type(torch.FloatTensor).to(device))
                     else:
+                        #print(train_batch['label'])
                         batch_loss = loss_fn(batch_score, train_batch['label'].to(device))
                     # print(train_batch['label'])
                     # input()
@@ -422,8 +438,6 @@ def train(args, model, loss_fn, m_optim, m_scheduler, metric, train_loader, dev_
 
             with sync_context():
                 batch_loss.backward()
-                # print(model.module.soft_embedding.weight.grad[:30, :])
-                # input()
             # if args.local_rank != -1:
             #     if (step+1) % args.gradient_accumulation_steps == 0:
             #         batch_loss.backward()
@@ -437,13 +451,13 @@ def train(args, model, loss_fn, m_optim, m_scheduler, metric, train_loader, dev_
                 torch.nn.utils.clip_grad_norm_(
                     model.parameters(), args.max_grad_norm)
                 m_optim.step()
-                m_scheduler.step()
+                if m_scheduler is not None:
+                    m_scheduler.step()
                 m_optim.zero_grad()
                 # global_step += 1
                 # print("step")
 
                 if args.logging_step > 0 and ((global_step+1) % args.logging_step == 0 or (args.test_init_log and global_step==0)):
-                    # print("in logging")
                     if args.local_rank in [-1, 0]:
                         logger.info("training gpu {}:,  global step: {}, local step: {}, loss: {}".format(args.local_rank,global_step+1, step+1, avg_loss/args.logging_step))
                         if args.tb is not None:
@@ -454,7 +468,7 @@ def train(args, model, loss_fn, m_optim, m_scheduler, metric, train_loader, dev_
                 if (global_step+1) % args.eval_every == 0 or (args.test_init_log and global_step==0):                
                     model.eval()
                     with torch.no_grad():
-                        rst_dict = dev(args, model, metric, dev_loader, device)
+                        rst_dict = dev(args, model, metric, dev_loader, device,tokenizer=tokenizer)
                     model.train()
 
                     if args.local_rank != -1:
@@ -472,59 +486,45 @@ def train(args, model, loss_fn, m_optim, m_scheduler, metric, train_loader, dev_
                     if args.local_rank in [-1,0]:
                         if args.metric.split('_')[0] == 'mrr':
                             mes = metric.get_mrr(args.qrels, args.res, args.metric)
-                        elif args.metric.split("_")[0] == "top":
-                            mes = metric.get_topk(args.qrels, args.res, args.metric)
                         else:
                             mes = metric.get_metric(args.qrels, args.res, args.metric)
 
                         if args.tb is not None:
                             args.tb.add_scalar("dev", mes, global_step + 1)
 
+                        #logger.info('save_model at step {}'.format(global_step+1))
                         if not os.path.exists(args.save):
-                            os.makedirs(args.save)
-                        if mes > best_mes:
+                                os.makedirs(args.save)
+
+                        if mes>best_mes:
                             best_mes=mes
                             ls=os.listdir(args.save)
                             for i in ls:
                                 item_path=os.path.join(args.save,i)
-                                print("remove {}".format(item_path))
+                                #print("remove {}".format(item_path))
+                                logger.info('remove_model at step {}'.format(global_step+1))
+                                logger.info('save model')
                                 os.remove(item_path)
                             if hasattr(model, "module"):
                                 torch.save(model.module.state_dict(), args.save + "_step-{}.bin".format(global_step+1))
                             else:
-                            # if args.soft_prompt:
-                            #     model.save_prompts(args.save + "_prompts_step-{}.bin".format(global_step+1))
-                            # else:
                                 torch.save(model.state_dict(), args.save + "_step-{}.bin".format(global_step+1))
-                        
-                            logger.info('save_model at step {}'.format(global_step+1))
-                        
-                        
                         # if args.n_gpu > 1:
                         #     torch.save(model.module.state_dict(), args.save + "_step-{}.bin".format(global_step+1))
                         # else:
                         #     torch.save(model.state_dict(), args.save + "_step-{}.bin".format(global_step+1))
-                        
                         logger.info("global step: {}, messure: {}, best messure: {}".format(global_step+1, mes, best_mes))
-                        
+                
                 global_step += 1
 
                 if args.max_steps is not None and global_step == args.max_steps:
                     force_break = True
                     break
-            # print("After: global step {}, rank {}".format(global_step, args.local_rank))
-            if args.local_rank != -1:
-                dist.barrier()
-            # print("After barrier: global step {}, rank {}".format(global_step, args.local_rank))
-        # print("After epoch: global step {}, rank {}".format(global_step, args.local_rank))
-        if args.local_rank != -1:
-            dist.barrier()
-        # print("After epoch barrier: global step {}, rank {}".format(global_step, args.local_rank))
+                
         if force_break:
             break
     if args.local_rank != -1:
         dist.barrier()
-    # print("Finish training. {}".format(args.local_rank))
 
 def set_seed(seed):
     random.seed(seed)
@@ -577,8 +577,8 @@ def main():
     parser.add_argument("--pos_word", type=str, default=" relevant")
     parser.add_argument("--neg_word", type=str, default=" irrelevant")
     parser.add_argument("--soft_prompt", action="store_true")
-    parser.add_argument("--t5v11",type=bool,default=False)
-
+    #parser.add_argument("--t5v11",type=bool,default=False)
+    parser.add_argument("--original_t5", action="store_true")
     parser.add_argument("--max_steps", type=int)
 
     args = parser.parse_args()
@@ -611,23 +611,13 @@ def main():
         train_set = om.data.datasets.t5Dataset(
                 dataset=args.train,
                 tokenizer=tokenizer,
-                mode='train',
-                query_max_len=args.max_query_len,
-                doc_max_len=args.max_doc_len,
-                max_input=args.max_input,
-                task=args.task,
-                isv11=args.t5v11
+                max_input=args.max_input
             )
         logger.info('reading dev data...')
         dev_set = om.data.datasets.t5Dataset(
                 dataset=args.dev,
                 tokenizer=tokenizer,
-                mode='dev',
-                query_max_len=args.max_query_len,
-                doc_max_len=args.max_doc_len,
-                max_input=args.max_input,
-                task=args.task,
-                isv11=args.t5v11
+                max_input=args.max_input
             )
     elif args.model == 'bert':
         if tokenizer is None:
@@ -797,7 +787,7 @@ def main():
         train_sampler = None
 
     if args.model == "t5":
-        model = om.models.t5(checkpoint=args.pretrain)
+        model = om.models.t5(args.pretrain) if not args.original_t5 else T5ForConditionalGeneration.from_pretrained(args.pretrain)
     elif args.model == 'bert' or args.model == 'roberta':
         if args.maxp:
             model = om.models.BertMaxP(
@@ -961,18 +951,33 @@ def main():
         m_optim = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr)
     elif args.optimizer.lower() == 'adamw':
         m_optim = AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr)
+    elif args.optimizer.lower() == "adafactor":
+        m_optim = Adafactor(
+            filter(lambda p: p.requires_grad, model.parameters()),
+            lr=1e-4,
+            eps=(1e-30, 1e-3),
+            clip_threshold=1.0,
+            decay_rate=-0.8,
+            beta1=None,
+            weight_decay=0.0,
+            relative_step=False,
+            scale_parameter=False,
+            warmup_init=False
+        )
         # print(m_optim.param_groups)
     # from IPython import embed
     # embed()
-
-    if args.local_rank == -1:
+    if args.optimizer.lower() == "adafactor":
+        m_scheduler = None
+    elif args.local_rank == -1:
         m_scheduler = get_linear_schedule_with_warmup(m_optim, num_warmup_steps=args.n_warmup_steps, num_training_steps=len(train_set)*args.epoch//args.batch_size if args.max_steps is None else args.max_steps)
     else:
         m_scheduler = get_linear_schedule_with_warmup(m_optim, num_warmup_steps=args.n_warmup_steps, num_training_steps=len(train_set)*args.epoch//(args.batch_size*args.world_size*args.gradient_accumulation_steps) if args.max_steps is None else args.max_steps)
     if args.reinfoselect:
         p_optim = torch.optim.Adam(filter(lambda p: p.requires_grad, policy.parameters()), lr=args.lr)
 
-    optimizer_to(m_optim,device)
+    if m_optim is not None:
+        optimizer_to(m_optim,device)
     
 
     metric = om.metrics.Metric()
