@@ -34,7 +34,7 @@ class t5Dataset(Dataset):
     def __getitem__(self, index: int) -> Dict[str, Any]:
         example = self._examples[index]
         #text='mnli hypothesis: ' + example["hypothesis"] + ' premise: ' + example["premise"]
-        text='Query: ' + example["query"] + ' Document: ' + example["doc"]
+        text='Query: ' + example["query"] + ' Document: ' + example["doc"]+" Relevant: "
         tokenized = self._tokenizer(text, padding="max_length", truncation=True, max_length=384)
         source_ids, source_mask = tokenized["input_ids"], tokenized["attention_mask"]
         tokenized = self._tokenizer(self._label_mapping[example["label"]], padding="max_length", truncation=True, max_length=10)
