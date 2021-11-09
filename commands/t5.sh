@@ -1,23 +1,23 @@
 set -ex
-export CUDA_VISIBLE_DEVICES=0,1,2,3
+export CUDA_VISIBLE_DEVICES=5,6
 LR=1e-4
 
-MAX_STEPS=80000
-EPOCH=3
+MAX_STEPS=3000
+EPOCH=300000
 
-Q='full'
-LOG_STEP=100
-EVAL_EVERY=1000
+Q=1000
+LOG_STEP=10
+EVAL_EVERY=100
 
-BATCH_SIZE=8
+BATCH_SIZE=2
 NEG=1
 
 
-ckpt="/home/huxiaomeng/t5v11large/"
-
+#ckpt="/home/huxiaomeng/t5v11large/"
+ckpt="t5-large"
 python -m torch.distributed.launch \
-         --nproc_per_node=4 \
-         --master_port=10227  \
+         --nproc_per_node=2 \
+         --master_port=2227  \
         train.py \
         -task classification  \
         -model t5  \
@@ -42,7 +42,7 @@ python -m torch.distributed.launch \
         -logging_step $LOG_STEP  \
         --log_dir=/data/private/huxiaomeng/last_try_t5v11/logs/q$Q-n-$NEG/ \
         --max_steps=$MAX_STEPS \
-        -gradient_accumulation_steps 1 \
+        -gradient_accumulation_steps 4 \
         --original_t5 \
         
        
