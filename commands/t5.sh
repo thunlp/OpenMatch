@@ -44,7 +44,7 @@ python -m torch.distributed.launch \
         --max_steps=$MAX_STEPS \
         -gradient_accumulation_steps 8 \
         --soft_prompt   \
-        --soft_sentence="The following is a query-document pair. What we need to do is to find their relevance according to the probability that the predict word to be true"
+        --soft_sentence=""
         #--original_t5 \
         
        
