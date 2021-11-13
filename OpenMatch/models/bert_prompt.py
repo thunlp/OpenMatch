@@ -31,13 +31,16 @@ class BertPrompt(nn.Module):
         self.soft_embedding = None
 
         if self._soft_prompt:
-            print("soft prompt")
-
+            #print("soft prompt")
+            torch.manual_seed(13)
             self.soft_embedding = nn.Embedding(100, self._config.hidden_size)
+            #print(self.soft_embedding.weight.data)
             self.model_embedding = self._model.get_input_embeddings()
             self.soft_embedding.weight.data = self.model_embedding.weight.data[:100, :].clone().detach().requires_grad_(True)
+            #print(self.soft_embedding.weight.data)
             for param in self._model.parameters():
                 param.requires_grad_(False)
+            #torch.manual_seed(13)
             self.new_lstm_head = nn.LSTM(
                 input_size = self._config.hidden_size,
                 hidden_size = self._config.hidden_size, # TODO P-tuning different in LAMA & FewGLUE
@@ -46,11 +49,14 @@ class BertPrompt(nn.Module):
                 bidirectional=True,
                 batch_first=True
             )
+            #print(self.new_lstm_head.all_weights[0][0][0])
+            #torch.manual_seed(13)
             self.new_mlp_head = nn.Sequential(
                 nn.Linear(2*self._config.hidden_size, self._config.hidden_size),
                 nn.ReLU(),
                 nn.Linear(self._config.hidden_size, self._config.hidden_size)
             )
+            #print(self.new_mlp_head[2].weight.data)
         # if fix_parameters:
         #     self._model.eval()
 
@@ -80,7 +86,9 @@ class BertPrompt(nn.Module):
             input_embeddings = torch.where((input_ids >= 0).unsqueeze(-1), normal_embeddings, soft_prompt_embeddings)
             # print(input_embeddings)
             # input()
-            output = self._model(inputs_embeds=input_embeddings)[0]
+            #print(input_embeddings[0][40][0])
+            output = self._model(inputs_embeds=input_embeddings,attention_mask = input_mask,token_type_ids = segment_ids)[0]
+            #output=self._model(inputs_embeds=input_embeddings)[0]
             # output = self.new_lstm_head(output)[0]
 
             # print(output)

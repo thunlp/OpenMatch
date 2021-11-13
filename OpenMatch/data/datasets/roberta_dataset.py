@@ -2,6 +2,7 @@ from typing import List, Tuple, Dict, Any
 
 import json
 
+
 import torch
 from torch.utils.data import Dataset
 
@@ -227,12 +228,14 @@ class RobertaDataset(Dataset):
                 if text.startswith("[SP"):
                     pos_end = text.find("]")
                     num = int(text[3:pos_end])
+                    text=text[pos_end:]
                     # print("num:", num)
                     tokenizer_output = self._tokenizer(text, padding="max_length", truncation=True, max_length=512-num)
                     input_ids = tokenizer_output.input_ids
                     attention_mask = tokenizer_output.attention_mask
                     input_ids = [input_ids[0]] + [-x-1 for x in range(num)] + input_ids[1:]
                     attention_mask = [attention_mask[0]] + [1] * num + attention_mask[1:]
+                    #print(attention_mask)
                     # print(input_ids)
                     # print(tokenizer_output)
                     # input()
@@ -253,6 +256,7 @@ class RobertaDataset(Dataset):
                 if text.startswith("[SP"):
                     pos_end = text.find("]")
                     num = int(text[3:pos_end])
+                    text=text[pos_end:]
                     # print("num:", num)
                     tokenizer_output = self._tokenizer(text, padding="max_length", truncation=True, max_length=512-num)
                     input_ids = tokenizer_output.input_ids
@@ -282,6 +286,7 @@ class RobertaDataset(Dataset):
                 if text.startswith("[SP"):
                     pos_end = text.find("]")
                     num = int(text[3:pos_end])
+                    text=text[pos_end:]
                     # print("num:", num)
                     tokenizer_output = self._tokenizer(text, padding="max_length", truncation=True, max_length=512-num)
                     input_ids = tokenizer_output.input_ids

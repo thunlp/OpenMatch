@@ -577,7 +577,7 @@ def main():
     parser.add_argument("--pos_word", type=str, default=" relevant")
     parser.add_argument("--neg_word", type=str, default=" irrelevant")
     parser.add_argument("--soft_prompt", action="store_true")
-    
+    parser.add_argument("--soft_sentence",type=str,default=None)
     parser.add_argument("--original_t5", action="store_true")
     parser.add_argument("--max_steps", type=int)
 
@@ -787,7 +787,7 @@ def main():
         train_sampler = None
 
     if args.model == "t5":
-        model = om.models.t5(args.pretrain) if not args.original_t5 else T5ForConditionalGeneration.from_pretrained(args.pretrain)
+        model = om.models.t5(args.pretrain,args.soft_prompt,args.soft_sentence) if not args.original_t5 else T5ForConditionalGeneration.from_pretrained(args.pretrain)
     elif args.model == 'bert' or args.model == 'roberta':
         if args.maxp:
             model = om.models.BertMaxP(
