@@ -46,8 +46,13 @@ def dev(args, model, metric, dev_loader, device,tokenizer):
                 batch_score=batch_logits[:,0,[6136,1176]]
                 #print(batch_score.shape)
             elif args.model== 't5':
-                batch_score=model(input_ids=dev_batch['input_ids'].to(device), 
-                attention_mask=dev_batch['attention_mask'].to(device)
+                batch_score=model(
+                        input_ids=dev_batch['input_ids'].to(device), 
+                        attention_mask=dev_batch['attention_mask'].to(device),
+                        query_ids=dev_batch['query_ids'].to(device), 
+                        doc_ids=dev_batch['doc_ids'].to(device),
+                        query_attention_mask=dev_batch['query_attention_mask'].to(device),
+                        doc_attention_mask=dev_batch['doc_attention_mask'].to(device)
                 )
             elif args.model == 'bert':
                 if args.task.startswith("prompt"):
@@ -324,7 +329,11 @@ def train(args, model, loss_fn, m_optim, m_scheduler, metric, train_loader, dev_
                 with sync_context():
                     batch_score = model(
                         input_ids=train_batch['input_ids'].to(device), 
-                        attention_mask=train_batch['attention_mask'].to(device)
+                        attention_mask=train_batch['attention_mask'].to(device),
+                        query_ids=train_batch['query_ids'].to(device), 
+                        doc_ids=train_batch['doc_ids'].to(device),
+                        query_attention_mask=train_batch['query_attention_mask'].to(device),
+                        doc_attention_mask=train_batch['doc_attention_mask'].to(device)
                         )
             elif args.model == 'bert':
                 if args.task == 'ranking':
@@ -580,11 +589,11 @@ def main():
     parser.add_argument("--soft_sentence",type=str,default=None)
     parser.add_argument("--original_t5", action="store_true")
     parser.add_argument("--max_steps", type=int)
-
+    
     args = parser.parse_args()
     set_seed(13)
     set_dist_args(args) # get local cpu/gpu device
-
+    #print(args.template)
     if args.log_dir is not None:
         writer = SummaryWriter(args.log_dir)
         args.tb = writer
@@ -611,13 +620,15 @@ def main():
         train_set = om.data.datasets.t5Dataset(
                 dataset=args.train,
                 tokenizer=tokenizer,
-                max_input=args.max_input
+                max_input=args.max_input,
+                template=args.template
             )
         logger.info('reading dev data...')
         dev_set = om.data.datasets.t5Dataset(
                 dataset=args.dev,
                 tokenizer=tokenizer,
-                max_input=args.max_input
+                max_input=args.max_input,
+                template=args.template
             )
     elif args.model == 'bert':
         if tokenizer is None:
@@ -947,6 +958,7 @@ def main():
 
     model.zero_grad()
     model.train()
+    #print(model.prefix_soft_embedding_layer.weight.data.requires_grad)
     if args.optimizer.lower() == 'adam':
         m_optim = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr)
     elif args.optimizer.lower() == 'adamw':
@@ -967,6 +979,10 @@ def main():
         # print(m_optim.param_groups)
     # from IPython import embed
     # embed()
+    #print(len(m_optim.param_groups[0]))
+    #for p in m_optim.param_groups[0]['params']:
+        #print(p.shape,p.requires_grad)
+    #print(len(m_optim.param_groups[0]['params'])) 
     if args.optimizer.lower() == "adafactor":
         m_scheduler = None
     elif args.local_rank == -1:
