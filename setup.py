@@ -1,20 +1,28 @@
-from setuptools import setup, find_packages
+import setuptools
 
-install_requires = [
-    'torch==1.4.0',
-    'transformers==2.8.0',
-    'faiss-cpu==1.6.3',
-    'nltk==3.5',
-    'pytrec_eval==0.4'
-]
+with open("README.md", "r", encoding="utf-8") as fh:
+    long_description = fh.read()
 
-setup(
-    name="OpenMatch",
+setuptools.setup(
+    name="openmatch-thunlp",
     version="0.0.1",
-    author="OpenMatch Authors",
-    author_email='zkt18{at}mails.tsinghua.edu.cn',
-    description="An Open Source Package for Information Retrieval",
-    packages=find_packages(),
-    install_requires=install_requires,
-    python_requires='>=3.6'
+    author="Shi Yu",
+    author_email="yushi17@foxmail.com",
+    description="An python package for research on Information Retrieval",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
+    classifiers=[
+        "Programming Language :: Python :: 3",
+        "License :: OSI Approved :: MIT License",
+        "Topic :: Text Processing :: Indexing",
+        "Intended Audience :: Information Technology"
+    ],
+    package_dir={"": "src"},
+    packages=setuptools.find_packages(where="src"),
+    python_requires=">=3.7",
+    install_requires=[
+        "transformers>=4.10.0",
+        "sentencepiece",
+        "datasets>=1.1.3"
+    ]
 )
