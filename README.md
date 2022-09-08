@@ -2,7 +2,7 @@
 
 An all-in-one toolkit for information retrieval. Under active development.
 
-# Install
+## Install
 
 ```bash
 git clone https://github.com/thunlp/OpenMatch.git
@@ -16,7 +16,7 @@ We do not include all the requirements in the package. You may need to manually 
 
 You may also need faiss for dense retrieval. You can install either `faiss-cpu` or `faiss-gpu`, according to your enviroment. Note that if you want to perform search on GPUs, you need to install the version of `faiss-gpu` compatible with your CUDA. In some cases (usually CUDA >= 11.0) `pip` installs a wrong version. If you encounter errors during search on GPUs, you may try installing it from `conda`. 
 
-# Features
+## Features
 
 - Human-friendly interface for dense retriever and re-ranker training and testing
 - Various PLMs supported (BERT, RoBERTa, T5...)
@@ -24,11 +24,11 @@ You may also need faiss for dense retrieval. You can install either `faiss-cpu` 
 - Deep integration with Huggingface Transformers and Datasets
 - Efficient training and inference via stream-style data loading
 
-# Docs
+## Docs
 
 See docs folder.
 
-# Project Organizers
+## Project Organizers
 
 - Zhiyuan Liu
   * Tsinghua University
@@ -43,10 +43,10 @@ See docs folder.
   * Tsinghua University
   * [Homepage](http://nlp.csai.tsinghua.edu.cn/staff/sms/)
 
-# Acknowledgments
+## Acknowledgments
 
 Our implementation uses [Tevatron](https://github.com/texttron/tevatron) as the starting point. We thank its authors for their contributions.
 
-# Contact
+## Contact
 
 Please email to yushi17@foxmail.com.
