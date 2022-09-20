@@ -152,11 +152,6 @@ class DataArguments:
         metadata={"help": "column names for the tsv data format"}
     )
 
-    map_style: bool = field(
-        default=True,
-        metadata={"help": "Whether to load the data as map-style"}
-    )
-
 
 @dataclass
 class DRTrainingArguments(TrainingArguments):

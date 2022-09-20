@@ -19,7 +19,15 @@ def get_idx(obj):
 
 class InferenceDataset(IterableDataset):
 
-    def __init__(self, tokenizer: PreTrainedTokenizer, data_args: DataArguments, is_query: bool = False, final: bool = True, cache_dir: str = None):
+    def __init__(
+        self, 
+        tokenizer: PreTrainedTokenizer, 
+        data_args: DataArguments, 
+        is_query: bool = False, 
+        final: bool = True, 
+        stream: bool = True,
+        cache_dir: str = None
+    ):
         super(InferenceDataset, self).__init__()
         self.cache_dir = cache_dir
         self.processed_data_path = data_args.processed_data_path
@@ -29,24 +37,43 @@ class InferenceDataset(IterableDataset):
         self.proc_num = data_args.dataset_proc_num
         self.template = data_args.query_template if is_query else data_args.doc_template
         self.all_markers = find_all_markers(self.template)
-        self.stream = not data_args.map_style
+        self.stream = stream
         self.final = final
 
     @classmethod
-    def load(cls, tokenizer: PreTrainedTokenizer, data_args: DataArguments, is_query: bool = False, final: bool = True, cache_dir: str = None):
+    def load(
+        cls, 
+        tokenizer: PreTrainedTokenizer, 
+        data_args: DataArguments, 
+        is_query: bool = False, 
+        final: bool = True, 
+        stream: bool = True,
+        cache_dir: str = None
+    ):
         data_files = [data_args.query_path] if is_query else [data_args.corpus_path]
         ext = os.path.splitext(data_files[0])[1]
-        if ext == ".jsonl":
-            return JsonlDataset(tokenizer, data_args, is_query, final, cache_dir)
-        elif ext in [".tsv", ".txt"]:
-            return TsvDataset(tokenizer, data_args, is_query, final, cache_dir)
-        else:
+        ext_to_cls = {
+            ".json": JsonlDataset,
+            ".tsv": TsvDataset,
+            ".txt": TsvDataset,
+        }
+        cls_ = ext_to_cls.get(ext, None)
+        if cls_ is None:
             raise ValueError("Unsupported dataset file extension {}".format(ext))
+        return cls_(tokenizer, data_args, is_query, final, stream, cache_dir)
 
     def _process_func(self, example):
         example_id = get_idx(example)
         full_text = fill_template(self.template, example, self.all_markers, allow_not_found=True)
-        tokenized = self.tokenizer(full_text, add_special_tokens=self.final, padding='max_length' if self.final else False, truncation=True, max_length=self.max_len, return_attention_mask=self.final, return_token_type_ids=self.final)
+        tokenized = self.tokenizer(
+            full_text, 
+            add_special_tokens=self.final, 
+            padding='max_length' if self.final else False, 
+            truncation=True, 
+            max_length=self.max_len, 
+            return_attention_mask=self.final, 
+            return_token_type_ids=self.final
+        )
         return {"text_id": example_id, **tokenized}
 
     def __iter__(self):
@@ -58,10 +85,23 @@ class InferenceDataset(IterableDataset):
 
 class JsonlDataset(InferenceDataset):
 
-    def __init__(self, tokenizer: PreTrainedTokenizer, data_args: DataArguments, is_query: bool = False, final: bool = True, cache_dir: str = None):
+    def __init__(
+        self, 
+        tokenizer: PreTrainedTokenizer, 
+        data_args: DataArguments, 
+        is_query: bool = False, 
+        final: bool = True, 
+        stream: bool = True,
+        cache_dir: str = None
+    ):
         super(JsonlDataset, self).__init__(tokenizer, data_args, is_query, final, cache_dir)
         if self.stream:
-            self.dataset = load_dataset("json", data_files=self.data_files, streaming=self.stream, cache_dir=cache_dir)["train"]
+            self.dataset = load_dataset(
+                "json", 
+                data_files=self.data_files, 
+                streaming=self.stream, 
+                cache_dir=cache_dir
+            )["train"]
             sample = list(self.dataset.take(1))[0]
             self.all_columns = sample.keys()
         else:
@@ -76,7 +116,15 @@ class JsonlDataset(InferenceDataset):
 
 class TsvDataset(InferenceDataset):
 
-    def __init__(self, tokenizer: PreTrainedTokenizer, data_args: DataArguments, is_query: bool = False, final: bool = True, cache_dir: str = None):
+    def __init__(
+        self, 
+        tokenizer: PreTrainedTokenizer, 
+        data_args: DataArguments, 
+        is_query: bool = False, 
+        final: bool = True, 
+        stream: bool = True,
+        cache_dir: str = None
+    ):
         super(TsvDataset, self).__init__(tokenizer, data_args, is_query, final, cache_dir)
         self.all_columns = data_args.query_column_names if is_query else data_args.doc_column_names
         self.all_columns = self.all_columns.split(',')

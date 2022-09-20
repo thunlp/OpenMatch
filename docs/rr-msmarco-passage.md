@@ -157,7 +157,6 @@ python -m openmatch.driver.rerank  \
     --p_max_len 128  \
     --fp16  \
     --trec_run_path /path/to/first-stage/trecrun/file  \
-    --map_style  \
     --trec_save_path $RESULT_DIR/rr.trec  \
     --dataloader_num_workers 1 
 ```

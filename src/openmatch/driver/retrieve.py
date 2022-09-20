@@ -63,6 +63,7 @@ def main():
         tokenizer=tokenizer,
         data_args=data_args,
         is_query=True,
+        stream=True,
         cache_dir=model_args.cache_dir
     )
 
