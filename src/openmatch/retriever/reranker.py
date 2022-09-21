@@ -1,8 +1,8 @@
 import logging
+import os
 from contextlib import nullcontext
-from typing import Dict, List, Tuple
+from typing import Dict
 
-import numpy as np
 import torch
 from torch.cuda import amp
 from torch.nn import functional as F
@@ -12,8 +12,8 @@ from transformers import PreTrainedTokenizer
 from transformers.trainer_pt_utils import IterableDatasetShard
 
 from ..arguments import InferenceArguments as EncodingArguments
-from ..dataset import RRInferenceCollator
-from ..modeling import RRModel, RROutput
+from ..dataset import InferenceDataset, RRInferenceCollator
+from ..modeling import RRModel
 from ..utils import (load_from_trec, merge_retrieval_results_by_score,
                      save_as_trec)
 
@@ -38,7 +38,13 @@ def add_to_result_dict(result_dicts, qids, dids, scores):
 
 class RRPredictDataset(IterableDataset):
 
-    def __init__(self, tokenizer, query_dataset: Dataset, corpus_dataset: Dataset, run):
+    def __init__(
+        self, 
+        tokenizer: PreTrainedTokenizer, 
+        query_dataset: InferenceDataset, 
+        corpus_dataset: InferenceDataset, 
+        run: Dict[str, Dict[str, float]]
+    ):
         super(RRPredictDataset, self).__init__()
         self.tokenizer = tokenizer
         self.query_dataset = query_dataset
@@ -48,18 +54,30 @@ class RRPredictDataset(IterableDataset):
     def __iter__(self):
         def gen_q_d_pair():
             for qid, did_and_scores in self.run.items():
-                for did, score in did_and_scores.items():
+                for did, _ in did_and_scores.items():
                     yield {
                         "query_id": qid, 
                         "doc_id": did, 
-                        **encode_pair(self.tokenizer, self.query_dataset[qid]["input_ids"], self.corpus_dataset[did]["input_ids"], self.query_dataset.max_len, self.corpus_dataset.max_len),
+                        **encode_pair(
+                            self.tokenizer, 
+                            self.query_dataset[qid]["input_ids"], 
+                            self.corpus_dataset[did]["input_ids"], 
+                            self.query_dataset.max_len, 
+                            self.corpus_dataset.max_len
+                        ),
                     }
         return gen_q_d_pair()
 
 
 class Reranker:
 
-    def __init__(self, model: RRModel, tokenizer: PreTrainedTokenizer, corpus_dataset: Dataset, args: EncodingArguments):
+    def __init__(
+        self, 
+        model: RRModel, 
+        tokenizer: PreTrainedTokenizer, 
+        corpus_dataset: Dataset, 
+        args: EncodingArguments
+    ):
         logger.info("Initializing reranker")
         self.model = model
         self.tokenizer = tokenizer
@@ -69,7 +87,7 @@ class Reranker:
         self.model = model.to(self.args.device)
         self.model.eval()
 
-    def rerank(self, query_dataset: Dataset, run: Dict[str, List[Tuple[str, float]]]):
+    def rerank(self, query_dataset: InferenceDataset, run: Dict[str, Dict[str, float]]):
         return_dict = {}
         dataset = RRPredictDataset(self.tokenizer, query_dataset, self.corpus_dataset, run)
         if self.args.world_size > 1:
@@ -99,14 +117,17 @@ class Reranker:
                 add_to_result_dict(return_dict, qids, dids, scores)
     
         if self.args.world_size > 1:
-            save_as_trec(return_dict, self.args.trec_save_path + ".rank{}".format(self.args.process_index))
+            save_as_trec(return_dict, self.args.trec_save_path + ".rank.{}".format(self.args.process_index))
             torch.distributed.barrier()
             if self.args.process_index == 0:
                 # aggregate results
                 all_results = []
                 for i in range(self.args.world_size):
-                    all_results.append(load_from_trec(self.args.trec_save_path + ".rank{}".format(i)))
+                    all_results.append(load_from_trec(self.args.trec_save_path + ".rank.{}".format(i)))
                 return_dict = merge_retrieval_results_by_score(all_results)
+                # remove temp files
+                for i in range(self.args.world_size):
+                    os.remove(self.args.trec_save_path + ".rank.{}".format(i))
             torch.distributed.barrier()
 
         return return_dict
