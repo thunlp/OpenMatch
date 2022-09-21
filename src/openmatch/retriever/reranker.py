@@ -88,16 +88,16 @@ class Reranker:
             pin_memory=self.args.dataloader_pin_memory,
         )
         with torch.no_grad():
-            with amp.autocast() if self.args.fp16 else nullcontext():
-                for qids, dids, batch in tqdm(dataloader, desc="Reranking", disable=self.args.local_process_index > 0):
+            for qids, dids, batch in tqdm(dataloader, desc="Reranking", disable=self.args.local_process_index > 0):
+                with amp.autocast() if self.args.fp16 else nullcontext():
                     for k, v in batch.items():
                         batch[k] = v.to(self.args.device)
                     outputs = self.model.encode(batch)
-                    if len(outputs.shape) == 2 and outputs.shape[1] == 2:
-                        outputs = F.softmax(outputs, dim=1)[:, 1]
-                    scores = outputs.cpu().numpy()
-                    add_to_result_dict(return_dict, qids, dids, scores)
-        
+                if len(outputs.shape) == 2 and outputs.shape[1] == 2:
+                    outputs = F.log_softmax(outputs, dim=1)[:, 1]
+                scores = outputs.cpu().numpy()
+                add_to_result_dict(return_dict, qids, dids, scores)
+    
         if self.args.world_size > 1:
             save_as_trec(return_dict, self.args.trec_save_path + ".rank{}".format(self.args.process_index))
             torch.distributed.barrier()

@@ -139,7 +139,7 @@ class RRModel(nn.Module):
         hf_config = AutoConfig.from_pretrained(model_args.model_name_or_path, **hf_kwargs)
         if model_args.encoder_only:
             model_class = T5EncoderModel
-        elif hf_config.architectures[0] == "T5WithLMHeadModel":  # Pre-trained T5 model
+        elif "T5" in hf_config.architectures[0]:  # Pre-trained T5 model
             model_class = T5ForConditionalGeneration
         else:
             model_class = AutoModel

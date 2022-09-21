@@ -55,6 +55,7 @@ def main():
 
     model = RRModel.build(
         model_args=model_args,
+        tokenizer=tokenizer,
         config=config,
         cache_dir=model_args.cache_dir,
     )
