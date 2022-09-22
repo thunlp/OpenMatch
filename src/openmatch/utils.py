@@ -139,13 +139,20 @@ def save_as_trec(rank_result: Dict[str, Dict[str, float]], output_path: str, run
 def load_from_trec(input_path: str, as_list: bool = False, max_len_per_q: int = None):
     """
     Load the rank result from TREC format:
-    <query_id> Q0 <doc_id> <rank> <score> <run_id>
+    <query_id> Q0 <doc_id> <rank> <score> <run_id> or
+    <query_id> <doc_id> <score>
     """
     rank_result = {}
     cnt = 0
     with open(input_path, "r") as f:
         for line in f:
-            qid, _, doc_id, _, score, _ = line.strip().split()
+            content = line.strip().split()
+            if len(content) == 6:
+                qid, _, doc_id, _, score, _ = content
+            elif len(content) == 3:
+                qid, doc_id, score = content
+            else:
+                raise ValueError("Invalid run format")
             if not as_list:
                 if qid not in rank_result:
                     rank_result[qid] = {}
