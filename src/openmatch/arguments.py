@@ -188,3 +188,5 @@ class InferenceArguments(TrainingArguments):
 
     trec_run_path: str = field(default=None, metadata={"help": "previous stage TrecRun file"})
     id_key_name: str = field(default="id", metadata={"help": "key name for id"})
+
+    reranking_depth: int = field(default=None, metadata={"help": "re-ranking depth"})
