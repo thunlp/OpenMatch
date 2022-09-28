@@ -8,10 +8,12 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import datasets
 import torch
 import torch.distributed as dist
+import torch.nn as nn
 from torch.utils.data import DataLoader
 from transformers.file_utils import is_datasets_available
-from transformers.trainer import Trainer, TRAINING_ARGS_NAME
-from transformers.trainer_pt_utils import IterableDatasetShard
+from transformers.trainer import TRAINING_ARGS_NAME, Trainer
+from transformers.trainer_pt_utils import IterableDatasetShard, nested_detach
+from transformers.trainer_utils import EvalPrediction
 
 from ..loss import DistributedContrastiveLoss, SimpleContrastiveLoss
 
@@ -22,6 +24,25 @@ try:
     _grad_cache_available = True
 except ModuleNotFoundError:
     _grad_cache_available = False
+
+
+def compute_metrics_on_device(device):
+
+    def compute_metrics(eval_prediction: EvalPrediction, label_ids=None):
+        q_reps, p_reps = eval_prediction.predictions[1:]
+        q_reps = torch.from_numpy(q_reps).to(device)
+        p_reps = torch.from_numpy(p_reps).to(device)
+        embed_dim = q_reps.shape[1]
+        num_p_per_q = p_reps.shape[1] // embed_dim
+        p_reps = p_reps.view(-1, embed_dim)
+        score_matrix = torch.matmul(q_reps, p_reps.transpose(0, 1))
+        q_to_id = torch.argsort(score_matrix, dim=1, descending=True)
+        target = torch.arange(q_reps.shape[0]).to(device) * num_p_per_q
+        ranks = torch.where(q_to_id == target[:, None])[1]
+        avg_rank = ranks.float().mean().item()
+        return {"avg_rank": avg_rank}
+
+    return compute_metrics
 
 
 class DRTrainer(Trainer):
@@ -99,10 +120,42 @@ class DRTrainer(Trainer):
             pin_memory=self.args.dataloader_pin_memory,
         )
 
+    def prediction_step(
+        self,
+        model: nn.Module,
+        inputs,
+        prediction_loss_only: bool,
+        ignore_keys: Optional[List[str]] = None,
+    ) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor], Optional[torch.Tensor]]:
+        inputs = self._prepare_inputs(inputs)
+        if ignore_keys is None:
+            if hasattr(self.model, "config"):
+                ignore_keys = getattr(self.model.config, "keys_to_ignore_at_inference", [])
+            else:
+                ignore_keys = []
+        with torch.no_grad():
+            with self.autocast_smart_context_manager():
+                loss, outputs = self.compute_loss(model, inputs, return_outputs=True)
+            loss = loss.mean().detach()
+
+            real_batch_size = outputs["q_reps"].shape[0]
+            outputs["p_reps"] = outputs["p_reps"].contiguous().view(real_batch_size, -1)
+
+            logits = tuple(v for k, v in outputs.items() if k not in ignore_keys + ["loss"])
+        
+        if prediction_loss_only:
+            return (loss, None, None)
+
+        logits = nested_detach(logits)
+        if len(logits) == 1:
+            logits = logits[0]
+
+        return (loss, logits, logits)
+
     def compute_loss(self, model, inputs, return_outputs=False):
         query, passage = inputs
         outputs = model(query=query, passage=passage)
-        return (outputs.loss, outputs) if return_outputs else outputs.loss
+        return (outputs["loss"], outputs) if return_outputs else outputs["loss"]
 
     def training_step(self, *args):
         return super(DRTrainer, self).training_step(*args) / self._dist_loss_scale_factor

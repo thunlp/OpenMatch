@@ -9,7 +9,7 @@ from openmatch.arguments import DRTrainingArguments as TrainingArguments
 from openmatch.arguments import ModelArguments
 from openmatch.dataset import QPCollator, DRTrainDataset, DREvalDataset
 from openmatch.modeling import DRModel
-from openmatch.trainer import DRTrainer as Trainer
+from openmatch.trainer import DRTrainer as Trainer, compute_metrics_on_device
 from openmatch.trainer import GCDenseTrainer
 from transformers import AutoConfig, AutoTokenizer, HfArgumentParser, set_seed
 from transformers.integrations import TensorBoardCallback
@@ -93,6 +93,7 @@ def main():
             max_p_len=data_args.p_max_len,
             max_q_len=data_args.q_max_len
         ),
+        compute_metrics=compute_metrics_on_device(training_args.device),
         callbacks=[tb_callback]
     )
     train_dataset.trainer = trainer

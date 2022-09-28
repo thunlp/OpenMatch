@@ -6,6 +6,7 @@ import logging
 import os
 from dataclasses import dataclass
 from typing import Dict, Optional
+from collections import OrderedDict
 
 import torch
 import torch.distributed as dist
@@ -123,7 +124,7 @@ class DRModel(nn.Module):
 
         if self.training and self.train_args.negatives_x_device:
             loss = loss * self.world_size  # counter average weight reduction
-        return DROutput(
+        return OrderedDict(
             loss=loss,
             scores=scores,
             q_reps=q_reps,
