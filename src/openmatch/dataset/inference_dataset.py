@@ -26,6 +26,9 @@ class InferenceDataset(IterableDataset):
         is_query: bool = False, 
         final: bool = True, 
         stream: bool = True,
+        batch_size: int = 1,
+        num_processes: int = 1,
+        process_index: int = 0,
         cache_dir: str = None
     ):
         super(InferenceDataset, self).__init__()
@@ -40,6 +43,10 @@ class InferenceDataset(IterableDataset):
         self.stream = stream
         self.final = final
 
+        self.batch_size = batch_size
+        self.num_processes = num_processes
+        self.process_index = process_index
+
     @classmethod
     def load(
         cls, 
@@ -48,6 +55,9 @@ class InferenceDataset(IterableDataset):
         is_query: bool = False, 
         final: bool = True, 
         stream: bool = True,
+        batch_size: int = 1,
+        num_processes: int = 1,
+        process_index: int = 0,
         cache_dir: str = None
     ):
         data_files = [data_args.query_path] if is_query else [data_args.corpus_path]
@@ -60,9 +70,19 @@ class InferenceDataset(IterableDataset):
         cls_ = ext_to_cls.get(ext, None)
         if cls_ is None:
             raise ValueError("Unsupported dataset file extension {}".format(ext))
-        return cls_(tokenizer, data_args, is_query, final, stream, cache_dir)
+        return cls_(
+            tokenizer=tokenizer, 
+            data_args=data_args, 
+            is_query=is_query, 
+            final=final, 
+            stream=stream, 
+            batch_size=batch_size,
+            num_processes=num_processes,
+            process_index=process_index,
+            cache_dir=cache_dir
+        )
 
-    def _process_func(self, example):
+    def process_one(self, example):
         example_id = get_idx(example)
         full_text = fill_template(self.template, example, self.all_markers, allow_not_found=True)
         tokenized = self.tokenizer(
@@ -77,30 +97,42 @@ class InferenceDataset(IterableDataset):
         return {"text_id": example_id, **tokenized}
 
     def __iter__(self):
-        return iter(self.dataset.map(self._process_func, remove_columns=self.all_columns))
+        real_batch_size = self.batch_size * self.num_processes
+        process_slice = range(self.process_index * self.batch_size, (self.process_index + 1) * self.batch_size)
+
+        current_batch = []
+        for element in self.dataset:
+            current_batch.append(element)
+            # Wait to have a full batch before yielding elements.
+            if len(current_batch) == real_batch_size:
+                for i in process_slice:
+                    yield self.process_one(current_batch[i])
+                current_batch = []
+
+        if len(current_batch) > 0:
+            for i in process_slice:
+                if i < len(current_batch):
+                    yield self.process_one(current_batch[i])
 
     def __getitem__(self, index):
-        return self._process_func(self.dataset[index])
+        return self.process_one(self.dataset[index])
 
 
 class JsonlDataset(InferenceDataset):
 
     def __init__(
         self, 
-        tokenizer: PreTrainedTokenizer, 
-        data_args: DataArguments, 
-        is_query: bool = False, 
-        final: bool = True, 
-        stream: bool = True,
-        cache_dir: str = None
+        tokenizer: PreTrainedTokenizer,
+        data_args: DataArguments,
+        **kwargs
     ):
-        super(JsonlDataset, self).__init__(tokenizer, data_args, is_query, final, stream, cache_dir)
+        super(JsonlDataset, self).__init__(**kwargs)
         if self.stream:
             self.dataset = load_dataset(
                 "json", 
                 data_files=self.data_files, 
                 streaming=self.stream, 
-                cache_dir=cache_dir
+                cache_dir=self.cache_dir
             )["train"]
             sample = list(self.dataset.take(1))[0]
             self.all_columns = sample.keys()
@@ -118,14 +150,12 @@ class TsvDataset(InferenceDataset):
 
     def __init__(
         self, 
-        tokenizer: PreTrainedTokenizer, 
-        data_args: DataArguments, 
-        is_query: bool = False, 
-        final: bool = True, 
-        stream: bool = True,
-        cache_dir: str = None
+        tokenizer: PreTrainedTokenizer,
+        data_args: DataArguments,
+        is_query: bool = False,
+        **kwargs
     ):
-        super(TsvDataset, self).__init__(tokenizer, data_args, is_query, final, stream, cache_dir)
+        super(TsvDataset, self).__init__(tokenizer, data_args, is_query, **kwargs)
         self.all_columns = data_args.query_column_names if is_query else data_args.doc_column_names
         self.all_columns = self.all_columns.split(',')
         if self.stream:
@@ -135,7 +165,7 @@ class TsvDataset(InferenceDataset):
                 streaming=self.stream, 
                 column_names=self.all_columns,
                 delimiter='\t',
-                cache_dir=cache_dir
+                cache_dir=self.cache_dir
             )["train"]
         else:
             self.dataset = {}
