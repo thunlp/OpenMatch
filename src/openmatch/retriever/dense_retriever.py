@@ -1,3 +1,4 @@
+import gc
 import glob
 import os
 import pickle
@@ -31,32 +32,30 @@ class Retriever:
         self.doc_lookup = []
         self.query_lookup = []
 
-        self.model = model.to(self.args.device)
+        self.model.to(self.args.device)
         self.model.eval()
 
     def _initialize_faiss_index(self, dim: int):
         self.index = None
-        if self.args.process_index == 0:
-            cpu_index = faiss.IndexFlatIP(dim)
-            self.index = cpu_index
+        cpu_index = faiss.IndexFlatIP(dim)
+        self.index = cpu_index
 
     def _move_index_to_gpu(self):
-        if self.args.process_index == 0:
-            logger.info("Moving index to GPU")
-            ngpu = faiss.get_num_gpus()
-            gpu_resources = []
-            for i in range(ngpu):
-                res = faiss.StandardGpuResources()
-                gpu_resources.append(res)
-            co = faiss.GpuMultipleClonerOptions()
-            co.shard = True
-            co.usePrecomputed = False
-            vres = faiss.GpuResourcesVector()
-            vdev = faiss.Int32Vector()
-            for i in range(0, ngpu):
-                vdev.push_back(i)
-                vres.push_back(gpu_resources[i])
-            self.index = faiss.index_cpu_to_gpu_multiple(vres, vdev, self.index, co)
+        logger.info("Moving index to GPU(s)")
+        ngpu = faiss.get_num_gpus()
+        gpu_resources = []
+        for i in range(ngpu):
+            res = faiss.StandardGpuResources()
+            gpu_resources.append(res)
+        co = faiss.GpuMultipleClonerOptions()
+        co.shard = True
+        co.usePrecomputed = False
+        vres = faiss.GpuResourcesVector()
+        vdev = faiss.Int32Vector()
+        for i in range(0, ngpu):
+            vdev.push_back(i)
+            vres.push_back(gpu_resources[i])
+        self.index = faiss.index_cpu_to_gpu_multiple(vres, vdev, self.index, co)
 
     def doc_embedding_inference(self):
         # Note: during evaluation, there's no point in wrapping the model
@@ -73,7 +72,7 @@ class Retriever:
             )
         dataloader = DataLoader(
             self.corpus_dataset,
-            batch_size=self.args.eval_batch_size,
+            batch_size=self.args.per_device_eval_batch_size,  # Note that we do not support DataParallel here
             collate_fn=DRInferenceCollator(),
             num_workers=self.args.dataloader_num_workers,
             pin_memory=self.args.dataloader_pin_memory,
@@ -101,6 +100,7 @@ class Retriever:
             torch.distributed.barrier()
 
     def init_index_and_add(self, partition: str = None):
+        logger.info("Initializing Faiss index from pre-computed document embeddings")
         partitions = [partition] if partition is not None else glob.glob(os.path.join(self.args.output_dir, "embeddings.corpus.rank.*"))
         for i, part in enumerate(partitions):
             with open(part, 'rb') as f:
@@ -112,9 +112,6 @@ class Retriever:
                 self._initialize_faiss_index(dim)
             self.index.add(encoded)
             self.doc_lookup.extend(lookup_indices)
-        logger.info("Finish adding documents to index")
-        if self.args.use_gpu:
-            self._move_index_to_gpu()
 
     @classmethod
     def build_all(cls, model: DRModelForInference, corpus_dataset: IterableDataset, args: EncodingArguments):
@@ -158,7 +155,7 @@ class Retriever:
             )
         dataloader = DataLoader(
             query_dataset,
-            batch_size=self.args.eval_batch_size,
+            batch_size=self.args.per_device_eval_batch_size,
             collate_fn=DRInferenceCollator(),
             num_workers=self.args.dataloader_num_workers,
             pin_memory=self.args.dataloader_pin_memory,
@@ -206,19 +203,23 @@ class Retriever:
                 return_dict[qid][str(doc_index)] = float(score)
             q += 1
 
+        logger.info("End searching with {} queries".format(len(return_dict)))
+
         return return_dict
 
     def retrieve(self, query_dataset: IterableDataset, topk: int = 100):
         self.query_embedding_inference(query_dataset)
+        self.model.cpu()
+        del self.model
+        torch.cuda.empty_cache()
         results = {}
         if self.args.process_index == 0:
+            if self.args.use_gpu:
+                self._move_index_to_gpu()
             results = self.search(topk)
         if self.args.world_size > 1:
             torch.distributed.barrier()
         return results
-
-
-
 
 
 class SuccessiveRetriever(Retriever):
@@ -241,6 +242,8 @@ class SuccessiveRetriever(Retriever):
             for partition in all_partitions:
                 logger.info("Loading partition {}".format(partition))
                 self.init_index_and_add(partition)
+                if self.args.use_gpu:
+                    self._move_index_to_gpu()
                 cur_result = self.search(topk)
                 self.reset_index()
                 final_result = merge_retrieval_results_by_score([final_result, cur_result], topk)
