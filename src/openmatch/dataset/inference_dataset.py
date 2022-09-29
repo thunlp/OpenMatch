@@ -94,7 +94,7 @@ class JsonlDataset(InferenceDataset):
         stream: bool = True,
         cache_dir: str = None
     ):
-        super(JsonlDataset, self).__init__(tokenizer, data_args, is_query, final, cache_dir)
+        super(JsonlDataset, self).__init__(tokenizer, data_args, is_query, final, stream, cache_dir)
         if self.stream:
             self.dataset = load_dataset(
                 "json", 
@@ -125,7 +125,7 @@ class TsvDataset(InferenceDataset):
         stream: bool = True,
         cache_dir: str = None
     ):
-        super(TsvDataset, self).__init__(tokenizer, data_args, is_query, final, cache_dir)
+        super(TsvDataset, self).__init__(tokenizer, data_args, is_query, final, stream, cache_dir)
         self.all_columns = data_args.query_column_names if is_query else data_args.doc_column_names
         self.all_columns = self.all_columns.split(',')
         if self.stream:
