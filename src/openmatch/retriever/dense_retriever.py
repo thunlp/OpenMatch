@@ -62,14 +62,6 @@ class Retriever:
         # inside a DistributedDataParallel as we'll be under `no_grad` anyways.
         if self.corpus_dataset is None:
             raise ValueError("No corpus dataset provided")
-        if self.args.world_size > 1:
-            self.corpus_dataset = IterableDatasetShard(
-                self.corpus_dataset,
-                batch_size=self.args.per_device_eval_batch_size,
-                drop_last=False,
-                num_processes=self.args.world_size,
-                process_index=self.args.process_index
-            )
         dataloader = DataLoader(
             self.corpus_dataset,
             batch_size=self.args.per_device_eval_batch_size,  # Note that we do not support DataParallel here
@@ -145,14 +137,6 @@ class Retriever:
         self.query_lookup = []
 
     def query_embedding_inference(self, query_dataset: IterableDataset):
-        if self.args.world_size > 1:
-            query_dataset = IterableDatasetShard(
-                query_dataset,
-                batch_size=self.args.per_device_eval_batch_size,
-                drop_last=False,
-                num_processes=self.args.world_size,
-                process_index=self.args.process_index
-            )
         dataloader = DataLoader(
             query_dataset,
             batch_size=self.args.per_device_eval_batch_size,
