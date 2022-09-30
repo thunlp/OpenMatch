@@ -190,3 +190,5 @@ class InferenceArguments(TrainingArguments):
     id_key_name: str = field(default="id", metadata={"help": "key name for id"})
 
     reranking_depth: int = field(default=None, metadata={"help": "re-ranking depth"})
+
+    max_inmem_docs: int = field(default=10000000, metadata={"help": "max number of docs to keep in memory"})

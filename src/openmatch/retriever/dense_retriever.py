@@ -1,10 +1,10 @@
 import gc
 import glob
+import logging
 import os
 import pickle
 from contextlib import nullcontext
 from typing import Dict, List
-import logging
 
 import faiss
 import numpy as np
@@ -12,7 +12,6 @@ import torch
 from torch.cuda import amp
 from torch.utils.data import DataLoader, IterableDataset
 from tqdm import tqdm
-from transformers.trainer_pt_utils import IterableDatasetShard
 
 from ..arguments import InferenceArguments as EncodingArguments
 from ..dataset import DRInferenceCollator
@@ -69,21 +68,34 @@ class Retriever:
             num_workers=self.args.dataloader_num_workers,
             pin_memory=self.args.dataloader_pin_memory,
         )
+
+        os.makedirs(self.args.output_dir, exist_ok=True)
         encoded = []
         lookup_indices = []
-        for (batch_ids, batch) in tqdm(dataloader, disable=self.args.local_process_index > 0):
+        idx = 0
+        prev_idx = 0
+        for (batch_ids, batch) in tqdm(dataloader, disable=self.args.process_index > 0):
             lookup_indices.extend(batch_ids)
+            idx += len(batch_ids)
             with amp.autocast() if self.args.fp16 else nullcontext():
                 with torch.no_grad():
                     for k, v in batch.items():
                         batch[k] = v.to(self.args.device)
                     model_output: DROutput = self.model(passage=batch)
                     encoded.append(model_output.p_reps.cpu().detach().numpy())
-        encoded = np.concatenate(encoded)
+            if len(lookup_indices) >= self.args.max_inmem_docs // self.args.world_size:
+                encoded = np.concatenate(encoded)
+                with open(os.path.join(self.args.output_dir, "embeddings.corpus.rank.{}.{}-{}".format(self.args.process_index, prev_idx, idx)), 'wb') as f:
+                    pickle.dump((encoded, lookup_indices), f, protocol=4)
+                encoded = []
+                lookup_indices = []
+                gc.collect()
+                prev_idx = idx + 1
 
-        os.makedirs(self.args.output_dir, exist_ok=True)
-        with open(os.path.join(self.args.output_dir, "embeddings.corpus.rank.{}".format(self.args.process_index)), 'wb') as f:
-            pickle.dump((encoded, lookup_indices), f, protocol=4)
+        if len(lookup_indices) > 0:
+            encoded = np.concatenate(encoded)
+            with open(os.path.join(self.args.output_dir, "embeddings.corpus.rank.{}.{}-{}".format(self.args.process_index, prev_idx, idx)), 'wb') as f:
+                pickle.dump((encoded, lookup_indices), f, protocol=4)
 
         del encoded
         del lookup_indices
@@ -146,7 +158,7 @@ class Retriever:
         )
         encoded = []
         lookup_indices = []
-        for (batch_ids, batch) in tqdm(dataloader, disable=self.args.local_process_index > 0):
+        for (batch_ids, batch) in tqdm(dataloader, disable=self.args.process_index > 0):
             lookup_indices.extend(batch_ids)
             with amp.autocast() if self.args.fp16 else nullcontext():
                 with torch.no_grad():
