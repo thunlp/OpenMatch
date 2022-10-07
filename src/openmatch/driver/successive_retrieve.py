@@ -54,7 +54,6 @@ def main():
     )
 
     model = DRModelForInference.build(
-        model_name_or_path=model_args.model_name_or_path,
         model_args=model_args,
         config=config,
         cache_dir=model_args.cache_dir,
@@ -65,6 +64,9 @@ def main():
         data_args=data_args,
         is_query=True,
         stream=True,
+        batch_size=encoding_args.per_device_eval_batch_size,
+        num_processes=encoding_args.world_size,
+        process_index=encoding_args.process_index,
         cache_dir=model_args.cache_dir
     )
 

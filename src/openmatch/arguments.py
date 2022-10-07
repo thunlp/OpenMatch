@@ -151,6 +151,10 @@ class DataArguments:
         default="id,title,text",
         metadata={"help": "column names for the tsv data format"}
     )
+    hash_column_name: str = field(
+        default="text",
+        metadata={"help": "column for hashing when id is not available"}
+    )
 
 
 @dataclass

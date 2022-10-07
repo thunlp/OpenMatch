@@ -11,9 +11,11 @@ from ..arguments import DataArguments
 from ..utils import fill_template, find_all_markers
 
 
-def get_idx(obj):
+def get_idx(obj, hash_column_name):
     example_id = obj.get("_id", None) or obj.get("id", None)
     example_id = str(example_id) if example_id is not None else None
+    if example_id is None:
+        example_id = str(hash(obj[hash_column_name]))
     return example_id
 
 
@@ -42,6 +44,7 @@ class InferenceDataset(IterableDataset):
         self.all_markers = find_all_markers(self.template)
         self.stream = stream
         self.final = final
+        self.hash_column_name = data_args.hash_column_name
 
         self.batch_size = batch_size
         self.num_processes = num_processes
@@ -83,7 +86,7 @@ class InferenceDataset(IterableDataset):
         )
 
     def process_one(self, example):
-        example_id = get_idx(example)
+        example_id = get_idx(example, self.hash_column_name)
         full_text = fill_template(self.template, example, self.all_markers, allow_not_found=True)
         tokenized = self.tokenizer(
             full_text, 
