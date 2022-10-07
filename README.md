@@ -1,3 +1,5 @@
+**This repo is deprecated. Please check out our new repo at https://github.com/OpenMatch/OpenMatch.**
+
 # OpenMatch v2
 
 An all-in-one toolkit for information retrieval. Under active development.
